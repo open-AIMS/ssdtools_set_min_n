@@ -41,7 +41,7 @@ We used the example datasets in the ssddata package in R (Fisher & Thorley 2021)
 
 This simulation process was repeated a minimum of 1,000 times for each dataset, and the results collated across all iterations. For each simulated dataset the true HCx values were obtained directly from the parameter estimates of each data generating distribution. From these, relative bias was calculated as the scaled-difference between the estimated HCx values and the true HCx value i.e  $$\frac{\widehat {HC}x-HCx}{HCx}$$ where $\widehat {HC}x$ is the estimate of the true value, $HCx$; coverage was calculated as the proportion of simulations where the true $HCx$ value fell within the lower and upper 95% confidence limits; and the scaled confidence interval width was calculated as $$\frac{UL-LL}{HCx}$$ where $UL$ and $LL$ are the upper and lower limits respectively.
 
-![](Images/fitted_dists.png)
+![](Images/fitted_dists.png) {width = 80%}
 
 *Figure 1. CDF plots and fitted ssdtools CDFs for all 20 example datasets, for the six recommended default distributions, as well as the model averaged CDF (black line).*
 
