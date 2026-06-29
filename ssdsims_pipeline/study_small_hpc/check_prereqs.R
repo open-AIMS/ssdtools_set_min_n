@@ -10,7 +10,7 @@ options(warn = 2)
 #   * each runtime package installs & loads
 #   * ssdsims is available and its scenario API exists
 #   * crew.cluster::crew_options_slurm() constructs
-#   * selected_datasets.csv exists and scenario.R builds + fans out into shards
+#   * scenario.R builds + fans out into shards
 #   * a read-only compute-cost estimate
 #
 # Exits 0 if all required checks pass, 1 otherwise. Network checks are optional
@@ -141,23 +141,13 @@ if (requireNamespace("crew.cluster", quietly = TRUE)) {
   })
 }
 
-# ---- selection + scenario builds & fans out ----
-cat_section("selected_datasets.csv + scenario.R")
-check(
-  "selected_datasets.csv exists (run select_datasets.R if not)",
-  file.exists("selected_datasets.csv"),
-  hint = "Rscript select_datasets.R  (the prep step that picks the six datasets)."
-)
-check(
-  "populations.rds exists (run make_populations.R if not)",
-  file.exists("populations.rds"),
-  hint = "Rscript make_populations.R  (the prep step that generates the parametric populations). It is committed, so normally arrives via git pull."
-)
+# ---- scenario builds & fans out ----
+cat_section("scenario.R")
 scenario <- NULL
 if (
-  file.exists("populations.rds") &&
-    requireNamespace("ssdsims", quietly = TRUE) &&
-    requireNamespace("ssddata", quietly = TRUE)
+  requireNamespace("ssdsims", quietly = TRUE) &&
+    requireNamespace("ssddata", quietly = TRUE) &&
+    requireNamespace("ssdtools", quietly = TRUE)
 ) {
   check(
     "scenario.R sources and builds an ssdsims_scenario",
@@ -167,7 +157,7 @@ if (
       scenario <<- e$scenario
       inherits(scenario, "ssdsims_scenario")
     },
-    hint = "Check the dataset names in selected_datasets.csv resolve in ssddata."
+    hint = "scenario.R builds from the ssddata example datasets; the first run fits them into cache/."
   )
   if (!is.null(scenario)) {
     check(
