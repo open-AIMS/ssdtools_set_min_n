@@ -89,7 +89,7 @@ scenario <- ssd_define_scenario(
   # nsim x (20 datasets x per-(dataset, sim) hc cost). With prior measurements
   # around ~2.2-2.5 min per (dataset, sim) hc task, each sim shard is on the
   # order of ~45-50 minutes and should be long-lived enough for SLURM.
-  nsim = 15L,
+  nsim = 500L,
   seed = 42L,
   nrow = c(5L, 6L, 7L, 8L, 10L, 16L, 26L),
   dists = ssd_distset(BCANZ = ssd_dists_bcanz()),
