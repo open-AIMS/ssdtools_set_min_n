@@ -34,6 +34,11 @@ vignettes/*.pdf
 *_cache/
 /cache/
 
+# Generated pipeline state
+/ssdsims_pipeline/**/cache/
+/ssdsims_pipeline/**/results/
+/ssdsims_pipeline/output/
+
 # Temporary files created by R markdown
 *.utf8.md
 *.knit.md
