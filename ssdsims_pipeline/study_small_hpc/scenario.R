@@ -101,6 +101,7 @@ scenario <- ssd_define_scenario(
   # Coarsen shard granularity for HPC: one fit/hc shard per simulation.
   # This trades off some parallelism for substantially longer shard runtime.
   partition_by = list(
+    sample = "sim",
     fit = "sim",
     hc = "sim"
   )
