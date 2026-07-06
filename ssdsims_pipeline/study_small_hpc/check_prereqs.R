@@ -20,7 +20,14 @@ options(warn = 2)
 #   Rscript check_prereqs.R
 
 cat_section <- function(label) {
-  cat("\n== ", label, " ", strrep("=", max(0L, 72L - nchar(label))), "\n", sep = "")
+  cat(
+    "\n== ",
+    label,
+    " ",
+    strrep("=", max(0L, 72L - nchar(label))),
+    "\n",
+    sep = ""
+  )
 }
 
 n_ok <- 0L
@@ -32,13 +39,27 @@ check <- function(label, expr, required = TRUE, hint = NULL) {
     list(ok = isTRUE(force(expr)), err = NULL),
     error = function(e) list(ok = FALSE, err = conditionMessage(e))
   )
-  status <- if (res$ok) "PASS" else if (required) "FAIL" else "WARN"
+  status <- if (res$ok) {
+    "PASS"
+  } else if (required) {
+    "FAIL"
+  } else {
+    "WARN"
+  }
   cat(sprintf("  [%s] %s\n", status, label))
   if (!res$ok) {
-    if (!is.null(res$err)) cat("        ", res$err, "\n", sep = "")
+    if (!is.null(res$err)) {
+      cat("        ", res$err, "\n", sep = "")
+    }
     if (!is.null(hint)) cat("        hint: ", hint, "\n", sep = "")
   }
-  if (res$ok) n_ok <<- n_ok + 1L else if (required) n_fail <<- n_fail + 1L else n_warn <<- n_warn + 1L
+  if (res$ok) {
+    n_ok <<- n_ok + 1L
+  } else if (required) {
+    n_fail <<- n_fail + 1L
+  } else {
+    n_warn <<- n_warn + 1L
+  }
   invisible(res$ok)
 }
 
@@ -47,7 +68,9 @@ cat_section("R")
 cat("  version  : ", R.version.string, "\n", sep = "")
 cat("  platform : ", R.version$platform, "\n", sep = "")
 cat("  libPaths :\n")
-for (p in .libPaths()) cat("    - ", p, "\n", sep = "")
+for (p in .libPaths()) {
+  cat("    - ", p, "\n", sep = "")
+}
 
 check(
   "R is 4.4.x",
@@ -71,8 +94,13 @@ for (bin in c("sbatch", "squeue", "srun", "scancel")) {
 # ---- Network (install only) ----
 cat_section("Outbound HTTPS (needed only for install_deps.R)")
 can_reach <- function(url) {
-  res <- tryCatch(curlGetHeaders(url, redirect = FALSE, timeout = 5L), error = function(e) NULL)
-  if (is.null(res)) return(FALSE)
+  res <- tryCatch(
+    curlGetHeaders(url, redirect = FALSE, timeout = 5L),
+    error = function(e) NULL
+  )
+  if (is.null(res)) {
+    return(FALSE)
+  }
   status <- attr(res, "status")
   is.numeric(status) && status > 0L
 }
@@ -98,20 +126,45 @@ check(
 # ---- Packages ----
 cat_section("R packages (load each)")
 pkgs <- c(
-  "chk", "digest", "dplyr", "dqrng", "duckplyr", "jsonlite", "purrr",
-  "rlang", "sessioninfo", "tibble", "tidyr", "withr",
-  "targets", "tarchetypes", "tidyselect", "crew", "crew.cluster",
-  "mirai", "parallelly", "ggplot2", "readr", "scales",
-  "ssddata", "ssdtools", "ssdsims"
+  "chk",
+  "digest",
+  "dplyr",
+  "dqrng",
+  "duckplyr",
+  "jsonlite",
+  "purrr",
+  "rlang",
+  "sessioninfo",
+  "tibble",
+  "tidyr",
+  "withr",
+  "targets",
+  "tarchetypes",
+  "tidyselect",
+  "crew",
+  "crew.cluster",
+  "mirai",
+  "parallelly",
+  "ggplot2",
+  "readr",
+  "scales",
+  "ssddata",
+  "ssdtools",
+  "ssdsims"
 )
-for (p in pkgs) check(sprintf("library(%s)", p), requireNamespace(p, quietly = TRUE))
+for (p in pkgs) {
+  check(sprintf("library(%s)", p), requireNamespace(p, quietly = TRUE))
+}
 
 # ---- ssdsims surface ----
 cat_section("ssdsims API surface used by the pipeline")
 if (requireNamespace("ssdsims", quietly = TRUE)) {
   syms <- c(
-    "ssd_define_scenario", "ssd_scenario_data", "ssd_scenario_targets",
-    "ssd_scenario_hc_shards", "scenario_results_dir"
+    "ssd_define_scenario",
+    "ssd_scenario_data",
+    "ssd_scenario_targets",
+    "ssd_scenario_hc_shards",
+    "scenario_results_dir"
   )
   for (s in syms) {
     check(
@@ -119,13 +172,28 @@ if (requireNamespace("ssdsims", quietly = TRUE)) {
       exists(s, envir = asNamespace("ssdsims"), inherits = FALSE)
     )
   }
-  cat("  ssdsims version : ", as.character(packageVersion("ssdsims")), "\n", sep = "")
+  cat(
+    "  ssdsims version : ",
+    as.character(packageVersion("ssdsims")),
+    "\n",
+    sep = ""
+  )
 }
 if (requireNamespace("ssdtools", quietly = TRUE)) {
-  cat("  ssdtools version: ", as.character(packageVersion("ssdtools")), "\n", sep = "")
+  cat(
+    "  ssdtools version: ",
+    as.character(packageVersion("ssdtools")),
+    "\n",
+    sep = ""
+  )
 }
 if (requireNamespace("ssddata", quietly = TRUE)) {
-  cat("  ssddata version : ", as.character(packageVersion("ssddata")), "\n", sep = "")
+  cat(
+    "  ssddata version : ",
+    as.character(packageVersion("ssddata")),
+    "\n",
+    sep = ""
+  )
 }
 
 # ---- crew.cluster sanity ----
@@ -134,8 +202,10 @@ if (requireNamespace("crew.cluster", quietly = TRUE)) {
   check("crew_options_slurm() constructs", {
     opts <- crew.cluster::crew_options_slurm(
       script_lines = c("module load R/4.4.1", "module load slurm"),
-      partition = "cpuq", cpus_per_task = 1L,
-      memory_gigabytes_per_cpu = 1, time_minutes = 30L
+      partition = "cpuq",
+      cpus_per_task = 1L,
+      memory_gigabytes_per_cpu = 1,
+      time_minutes = 30L
     )
     inherits(opts, "crew_options_slurm")
   })
@@ -165,14 +235,27 @@ if (
       nrow(ssdsims::ssd_scenario_hc_shards(scenario)) > 1L,
       required = FALSE
     )
-    cat("  results dir     : ", ssdsims::scenario_results_dir(scenario), "\n", sep = "")
-    cat("  hc shards       : ", nrow(ssdsims::ssd_scenario_hc_shards(scenario)), "\n", sep = "")
+    cat(
+      "  results dir     : ",
+      ssdsims::scenario_results_dir(scenario),
+      "\n",
+      sep = ""
+    )
+    cat(
+      "  hc shards       : ",
+      nrow(ssdsims::ssd_scenario_hc_shards(scenario)),
+      "\n",
+      sep = ""
+    )
   }
 }
 
 # ---- cost estimate ----
 cat_section("Computation cost estimate (ballpark, read-only)")
-if (!is.null(scenario) && exists("ssd_estimate_cost", envir = asNamespace("ssdsims"))) {
+if (
+  !is.null(scenario) &&
+    exists("ssd_estimate_cost", envir = asNamespace("ssdsims"))
+) {
   est <- tryCatch(
     ssdsims::ssd_estimate_cost(scenario),
     error = function(e) {
@@ -184,18 +267,24 @@ if (!is.null(scenario) && exists("ssd_estimate_cost", envir = asNamespace("ssdsi
     print(est)
     total_secs <- as.numeric(est$total, units = "secs")
     longest_secs <- as.numeric(est$longest, units = "secs")
-    workers <- 32L # keep in sync with crew_controller_slurm(workers=) in _targets.R
+    workers <- 8L # keep in sync with crew_controller_slurm(workers=) in _targets.R
     wall <- max(longest_secs, total_secs / workers)
     cat(sprintf(
       "  rough wall time at %d workers: ~%.1f min (max of longest task and total/workers)\n",
-      workers, wall / 60
+      workers,
+      wall / 60
     ))
   }
 }
 
 # ---- summary ----
 cat_section("Summary")
-cat(sprintf("  passed : %d\n  warned : %d\n  failed : %d\n", n_ok, n_warn, n_fail))
+cat(sprintf(
+  "  passed : %d\n  warned : %d\n  failed : %d\n",
+  n_ok,
+  n_warn,
+  n_fail
+))
 if (n_fail > 0L) {
   cat("\nFAIL. Fix the items above before submitting.\n")
   quit(status = 1L)

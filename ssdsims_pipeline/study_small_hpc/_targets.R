@@ -23,14 +23,14 @@ library(tarchetypes)
 # to ../study_small/scenario.R (the backend change does not touch the science).
 source("scenario.R")
 
-# Controller: a transient SLURM worker pool. `seconds_idle = 30` frees an idle
-# worker after 30s. `script_lines` are appended to each worker's sbatch script.
-# Resource settings mirror the cluster's `cpuq` partition. Tune `workers` to
-# the cluster and the shard count (20 datasets x nsim hc tasks).
+# Controller: a transient SLURM worker pool. For short tasks, fewer workers +
+# longer idle retention reduces scheduler churn (fewer tiny SLURM jobs).
+# `script_lines` are appended to each worker's sbatch script.
+# Resource settings mirror the cluster's `cpuq` partition.
 controller <- crew.cluster::crew_controller_slurm(
   name = "study-small-hpc",
-  workers = 32L,
-  seconds_idle = 30,
+  workers = 8L,
+  seconds_idle = 900,
   options_cluster = crew.cluster::crew_options_slurm(
     script_lines = c(
       "#SBATCH --nice=6000",

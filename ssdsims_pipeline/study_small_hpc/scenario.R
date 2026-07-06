@@ -87,7 +87,7 @@ scenario <- ssd_define_scenario(
   # task (the default hc bundle/partition_by), not one task per cell. Measured
   # directly: ~2.2-2.5 min per (dataset, sim) hc task regardless of nrow, so
   # total serial cost is ~ 20 datasets x nsim x 2.5 min. nsim = 15 below is
-  # ~2.78 x 15 =~ 42 min wall time at the 18 workers _targets.R configures (no
+  # ~2.78 x 15 =~ 42 min wall time at the configured worker pool size (no
   # contention from other jobs on the machine). Raise nsim and budget
   # accordingly; re-time a small pilot (nsim = 2L or 3L) after any change to
   # nboot/proportion/dists, since those change the per-task cost too.
@@ -99,5 +99,11 @@ scenario <- ssd_define_scenario(
   proportion = proportions,
   ci = TRUE,
   nboot = 1000,
-  ci_method = "weighted_samples"
+  ci_method = "weighted_samples",
+  # Coarsen shard granularity for HPC: keep one fit shard per (dataset, sim)
+  # and bundle nrow/rescale within it to reduce very short worker tasks.
+  partition_by = list(
+    fit = c("dataset", "sim"),
+    hc = c("dataset", "sim")
+  )
 )
