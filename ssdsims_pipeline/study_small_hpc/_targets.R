@@ -23,14 +23,16 @@ library(tarchetypes)
 # to ../study_small/scenario.R (the backend change does not touch the science).
 source("scenario.R")
 
-# Controller: a transient SLURM worker pool. For short tasks, fewer workers +
-# longer idle retention reduces scheduler churn (fewer tiny SLURM jobs).
+# Controller: a transient SLURM worker pool tuned for the coarser sim-level
+# shards in scenario.R (fewer, longer tasks). With heavy shards, a smaller
+# worker pool and longer idle retention reduce queue churn and worker relaunches
+# between fit/hc phases.
 # `script_lines` are appended to each worker's sbatch script.
 # Resource settings mirror the cluster's `cpuq` partition.
 controller <- crew.cluster::crew_controller_slurm(
   name = "study-small-hpc",
-  workers = 8L,
-  seconds_idle = 900,
+  workers = 4L,
+  seconds_idle = 1800,
   options_cluster = crew.cluster::crew_options_slurm(
     script_lines = c(
       "#SBATCH --nice=6000",
@@ -42,9 +44,9 @@ controller <- crew.cluster::crew_controller_slurm(
     partition = "cpuq",
     cpus_per_task = 1L,
     memory_gigabytes_per_cpu = 2,
-    # ci = TRUE + nboot = 1000 makes each hc task the long pole (~2.2-2.5 min
-    # measured locally); 180 min per worker job is generous headroom.
-    time_minutes = 180L
+    # Sim-level hc shards can run for tens of minutes. Use a longer wall limit
+    # so each worker can process multiple shards before SLURM preempts it.
+    time_minutes = 360L
   )
 )
 

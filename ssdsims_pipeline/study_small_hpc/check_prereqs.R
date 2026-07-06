@@ -267,7 +267,7 @@ if (
     print(est)
     total_secs <- as.numeric(est$total, units = "secs")
     longest_secs <- as.numeric(est$longest, units = "secs")
-    workers <- 8L # keep in sync with crew_controller_slurm(workers=) in _targets.R
+    workers <- 4L # keep in sync with crew_controller_slurm(workers=) in _targets.R
     wall <- max(longest_secs, total_secs / workers)
     cat(sprintf(
       "  rough wall time at %d workers: ~%.1f min (max of longest task and total/workers)\n",

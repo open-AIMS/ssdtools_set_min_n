@@ -24,14 +24,14 @@ Set in `_targets.R` via `crew_options_slurm()`, mirroring the cluster's `cpuq`
 partition: 1 cpu/task, 2 GB/cpu, 180 min wall per worker job, `--nice=6000`,
 `workers = 8`, `seconds_idle = 900`.
 
-Scenario sharding is also intentionally coarsened in `scenario.R` with
-`partition_by = list(fit = c("dataset", "sim"), hc = c("dataset", "sim"))`, so
-fit/hc work is bundled into fewer, longer-running shards instead of many tiny
-ones. R is taken from PATH on the compute nodes; the
-`module load R/4.4.1` line in `script_lines` is harmless/redundant in that case
-and can be dropped if it conflicts. `module load slurm` keeps `sbatch`/`squeue`
-available inside worker jobs. Tune `workers`, `time_minutes`, and the partition
-to your allocation.
+Scenario sharding is intentionally coarsened in `scenario.R` with
+`partition_by = list(fit = "sim", hc = "sim")`, so each shard includes all 20
+datasets for one simulation index. This produces fewer, longer-running shards
+and avoids scheduler churn from very short jobs. R is taken from PATH on the
+compute nodes; the `module load R/4.4.1` line in `script_lines` is
+harmless/redundant in that case and can be dropped if it conflicts. `module
+load slurm` keeps `sbatch`/`squeue` available inside worker jobs. Tune
+`workers`, `time_minutes`, and the partition to your allocation.
 
 ## Run
 

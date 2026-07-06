@@ -83,14 +83,12 @@ scenario <- ssd_define_scenario(
   data,
   # nsim: original study used 1000. ssd_estimate_cost() is a poor guide here -
   # it badly underestimates wall time for this scenario shape, because each
-  # hc shard bundles ALL 7 nrow values x 3 proportions x nboot=1000 into ONE
-  # task (the default hc bundle/partition_by), not one task per cell. Measured
-  # directly: ~2.2-2.5 min per (dataset, sim) hc task regardless of nrow, so
-  # total serial cost is ~ 20 datasets x nsim x 2.5 min. nsim = 15 below is
-  # ~2.78 x 15 =~ 42 min wall time at the configured worker pool size (no
-  # contention from other jobs on the machine). Raise nsim and budget
-  # accordingly; re-time a small pilot (nsim = 2L or 3L) after any change to
-  # nboot/proportion/dists, since those change the per-task cost too.
+  # hc shard bundles all nrow/proportion/bootstrap work. To further avoid
+  # millisecond-scale shards on HPC, partitioning below bundles ALL 20 datasets
+  # into each sim-level shard (fit + hc). So serial cost is approximately
+  # nsim x (20 datasets x per-(dataset, sim) hc cost). With prior measurements
+  # around ~2.2-2.5 min per (dataset, sim) hc task, each sim shard is on the
+  # order of ~45-50 minutes and should be long-lived enough for SLURM.
   nsim = 15L,
   seed = 42L,
   nrow = c(5L, 6L, 7L, 8L, 10L, 16L, 26L),
@@ -100,10 +98,10 @@ scenario <- ssd_define_scenario(
   ci = TRUE,
   nboot = 1000,
   ci_method = "weighted_samples",
-  # Coarsen shard granularity for HPC: keep one fit shard per (dataset, sim)
-  # and bundle nrow/rescale within it to reduce very short worker tasks.
+  # Coarsen shard granularity for HPC: one fit/hc shard per simulation.
+  # This trades off some parallelism for substantially longer shard runtime.
   partition_by = list(
-    fit = c("dataset", "sim"),
-    hc = c("dataset", "sim")
+    fit = "sim",
+    hc = "sim"
   )
 )
