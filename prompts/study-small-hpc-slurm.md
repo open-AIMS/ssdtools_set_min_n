@@ -264,3 +264,32 @@ interpretation to explain this precisely (formula, -60/+Inf values, n>=k+2 rule,
 and that a candidate set shouldn't include a k>=N-1 distribution). This also
 explains part of the poor N=5 coverage. NOTE: worth guarding in ssdtools itself -
 glance/ssd_gof returns aicc=-55 (finite reward) at n=k rather than Inf/NA.
+
+---
+
+**User:** (continued autonomously) Complete the small_study run and report whether N=5 is materially worse than N=6 once the mixture is removed.
+
+**Claude:** Full small_study run completed (nsim=30, 41 datasets, N=5-8, five 2-parameter
+distributions, nboot=200; 1230 obs per cell). Dropped local workers 18->8 after RAM-driven
+crew crashes (same OOM signature as the HPC run). Result across HC1/HC5/HC10/HC20:
+
+| HC | N=5 cov | N=6 cov | N=7 | N=8 |
+|----|---------|---------|-----|-----|
+| 1  | 0.859 | 0.880 | 0.896 | 0.902 |
+| 5  | 0.850 | 0.866 | 0.888 | 0.895 |
+| 10 | 0.851 | 0.861 | 0.883 | 0.880 |
+| 20 | 0.849 | 0.869 | 0.878 | 0.879 |
+
+Answer: NOT robust as a jump. Without the degenerate lnorm_lnorm mixture, coverage
+degrades smoothly and gradually with smaller N (~1-2 points N=6->N=5), all cells
+under-covering ~0.85-0.90 vs 0.95 nominal (a separate weighted_samples small-N issue).
+N=5 CIs are widest (median rel width 24.5 vs 17.5 at HC1) and bias somewhat larger except
+at HC1 (where N=5 bias is actually smaller in magnitude, -0.15 vs -0.27). So the earlier
+sharp N=5-vs-N=6 gap was largely a mixture/AICc-degeneracy artefact, not an intrinsic cliff.
+
+Committed in two: (1) "Document AICc degeneracy behind HC1 non-monotonicity" - report HC1
+update + ssdtools-aicc-issue.md; (2) "Add small_study: N=5 vs N=6 without the lnorm_lnorm
+mixture" - pipeline + committed summary CSV and coverage PNG (written into the folder, not
+git-ignored ../output). Verified no large files staged.
+
+---
