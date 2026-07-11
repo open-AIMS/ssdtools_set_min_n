@@ -2,14 +2,14 @@
 
 # make_report_outputs.R - reporting outputs for the study_small_hpc run:
 #
-#   1. ../output/study_small_report_figure.png - a 3-panel figure (relative
+#   1. study_small_report_figure.png - a 3-panel figure (relative
 #      bias, relative CI width, coverage) vs N, faceted by HC proportion, with
 #      bias on a SYMMETRIC-log and width on a LOG10 y-axis. The small-N /
 #      small-proportion extremes (bias up to ~6.7e8, width up to ~7.8e9) flatten
 #      make_figure.R's shared linear facet_grid to near-zero; log axes make the
 #      box structure legible instead.
 #
-#   2. ../output/study_small_summary_table.csv - median relative bias, its IQR,
+#   2. study_small_summary_table.csv - median relative bias, its IQR,
 #      median relative CI width, and coverage, by proportion x N.
 #
 # Why a separate script from make_figure.R: the three panels need DIFFERENT
@@ -120,10 +120,12 @@ fig <- panel_a / panel_b / panel_c +
     subtitle = "Bias: symmetric-log; CI width: log10; coverage: linear, dashed line = nominal 0.95"
   )
 
-if (!dir.exists("../output")) dir.create("../output", recursive = TRUE)
-ggsave("../output/study_small_report_figure.png", fig,
+# Write the two headline artefacts into this folder (tracked) so report.qmd
+# renders from a clean checkout, matching the committed-CSV convention here. The
+# heavy summary.parquet they derive from stays git-ignored on the HPC results dir.
+ggsave("study_small_report_figure.png", fig,
   width = 10, height = 9, dpi = 150)
-cat("Wrote ../output/study_small_report_figure.png\n")
+cat("Wrote study_small_report_figure.png\n")
 
 # ---- table ------------------------------------------------------------------
 
@@ -140,8 +142,8 @@ summary_table <- results |>
   ) |>
   arrange(proportion, nrow)
 
-write.csv(summary_table, "../output/study_small_summary_table.csv", row.names = FALSE)
-cat("Wrote ../output/study_small_summary_table.csv\n\n")
+write.csv(summary_table, "study_small_summary_table.csv", row.names = FALSE)
+cat("Wrote study_small_summary_table.csv\n\n")
 
 # Console preview, rounded for readability (CSV keeps full precision).
 print(

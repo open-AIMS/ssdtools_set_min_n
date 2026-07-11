@@ -20,11 +20,12 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 
-# Reads the artifacts written by make_report_outputs.R (run that first):
-#   ../output/study_small_report_figure.png
-#   ../output/study_small_summary_table.csv
-fig_path <- "../output/study_small_report_figure.png"
-tbl_path <- "../output/study_small_summary_table.csv"
+# Reads the committed artifacts written by make_report_outputs.R (rerun that to
+# refresh them from summary.parquet):
+#   study_small_report_figure.png
+#   study_small_summary_table.csv
+fig_path <- "study_small_report_figure.png"
+tbl_path <- "study_small_summary_table.csv"
 stopifnot(file.exists(fig_path), file.exists(tbl_path))
 
 summary_table <- read.csv(tbl_path)
@@ -97,7 +98,11 @@ itself.
 
 **Takeaway.** Across all three metrics, $N = 5$ is a distinct failure regime and
 $N = 6$ is the point at which behaviour becomes substantially more reliable,
-consistent with $N = 5$ being the boundary this study set out to probe.
+consistent with $N = 5$ being the boundary this study set out to probe. **But
+much of this sharp N = 5 / N = 6 split is driven by the AICc mixture degeneracy,
+not by sample size itself** — with the degenerate mixture removed the gap shrinks
+to a gradual few percentage points (see [Without the mixture: is the N = 5 cliff
+real?]).
 
 ## Summary table
 
@@ -272,6 +277,69 @@ mixture that means excluding it below $N = 7$ — or the weights are meaningless
 Second, this AICc degeneracy is one concrete mechanism behind the poor N = 5
 behaviour seen in the bias/coverage results above: at N = 5 the model-averaged
 estimate is dominated by a mixture that the criterion has erroneously rewarded.
+
+## Without the mixture: is the N = 5 cliff real?
+
+The degeneracy above raises the obvious question: how much of the N = 5 failure
+is the *estimator* running out of data, and how much is the *criterion* rewarding
+a five-parameter mixture it should have excluded at that N? This cannot be
+recovered from the run above — coverage and CI width need fresh bootstrap
+intervals computed from the reduced candidate set — so it needs its own run. The
+companion [`small_study`](../small_study) pipeline repeats the design on all 41
+datasets with the **five 2-parameter unimodal distributions only** (gamma,
+lgumbel, llogis, lnorm, weibull — for which AICc is well defined at $N \ge 4$),
+at `nsim = 30`, $N \in \{5, 6, 7, 8\}$, `nboot = 200`. It runs locally in
+~30 min (`../small_study/README.md`); its committed summary feeds the table and
+figure below.
+
+```{r nomix}
+#| tbl-cap: "Coverage of the true HC~x~ by sample size with the lnorm_lnorm mixture removed (five 2-parameter distributions only; 41 datasets × 30 sims = 1,230 per cell)."
+nomix <- read.csv("../small_study/small_study_summary_table.csv")
+
+cov_wide <- nomix |>
+  mutate(HC = paste0("HC", 100 * proportion)) |>
+  select(HC, nrow, coverage) |>
+  pivot_wider(names_from = nrow, values_from = coverage,
+    names_prefix = "N=") |>
+  mutate(across(starts_with("N="), \(x) signif(x, 3)))
+kable(cov_wide, align = "lrrrr")
+
+# Gap between N=5 and N=6 with the mixture gone, for the prose below.
+gap56 <- nomix |>
+  select(proportion, nrow, coverage) |>
+  pivot_wider(names_from = nrow, values_from = coverage) |>
+  mutate(gap = `6` - `5`)
+mean_gap_pts <- round(100 * mean(gap56$gap), 1)
+n5_min <- signif(min(nomix$coverage[nomix$nrow == 5]), 3)
+n5_max <- signif(max(nomix$coverage[nomix$nrow == 5]), 3)
+w5 <- signif(nomix$median_width[nomix$nrow == 5 & nomix$proportion == 0.01], 3)
+w6 <- signif(nomix$median_width[nomix$nrow == 6 & nomix$proportion == 0.01], 3)
+```
+
+```{r nomix-fig}
+#| fig-cap: "Per-dataset coverage by N with the lnorm_lnorm mixture removed. Boxes overlap heavily across N = 5–8 with no step at N = 5→6; the dashed line is the nominal 0.95."
+include_graphics("../small_study/small_study_coverage.png")
+```
+
+**The cliff is largely an artefact of the mixture.** With the degenerate
+component gone, N = 5 coverage is `r n5_min`–`r n5_max` across the four
+proportions — a world away from the 0.58–0.78 seen with the full BCANZ set — and
+moving from N = 5 to N = 6 buys only about **`r mean_gap_pts` percentage points**
+of coverage on average, with a **smooth, monotonic** rise through N = 8 rather
+than a step. The sharp N = 5-versus-N = 6 discontinuity in the headline results
+was therefore substantially the AICc criterion switching regimes (mixture weight
+$\approx 1$ at N = 5, forced to 0 at N = 6), not an intrinsic property of HC~x~
+estimation at N = 5.
+
+Two caveats keep this honest. First, **every cell still under-covers** (~0.85–0.90
+against the nominal 0.95, even at N = 8) — a separate small-sample limitation of
+the `weighted_samples` bootstrap that removing the mixture does *not* fix.
+Second, N = 5 remains the **least precise** case: its median relative CI width at
+HC1 is `r w5` versus `r w6` at N = 6, so smaller samples still pay in interval
+width and (mostly) bias even when coverage is close. The practical conclusion is
+narrower than the headline "N = 5 is a distinct failure regime": once a sane
+candidate set is used (no $k \ge N - 1$ distribution), N = 5 is *worse* than N = 6
+only gradually, not catastrophically.
 
 ## Run diagnostics
 
