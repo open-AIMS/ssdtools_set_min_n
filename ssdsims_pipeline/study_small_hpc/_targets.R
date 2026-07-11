@@ -1,6 +1,4 @@
-options(warn = 2)
-
-# _targets.R - the 20-dataset bias/coverage/CI-width scenario (same science as
+# _targets.R - the 41-dataset bias/coverage/CI-width scenario (same science as
 # ../study_small), but driven by a SLURM-backed `crew.cluster` controller
 # instead of `crew::crew_controller_local()`. Each crew worker is a transient
 # SLURM job; the driver (run.R) must itself run on an HPC submit/login node so
@@ -21,7 +19,14 @@ library(tarchetypes)
 # `scenario` is defined in scenario.R, referenced as a global by the shard
 # targets, so editing scenario.R invalidates the dependent shards. Identical
 # to ../study_small/scenario.R (the backend change does not touch the science).
+#
+# Scope warn = 2 to the scenario "science" only, then restore the default. Left
+# as a persistent global it stayed in effect for the whole tar_make() subprocess,
+# so a benign gzfile "No space left on device" warning - raised by callr while
+# serialising the subprocess result to a full /tmp - became a fatal crash.
+old_warn <- options(warn = 2)
 source("scenario.R")
+options(old_warn)
 
 # Controller: a transient SLURM worker pool tuned for the coarser sim-level
 # shards in scenario.R (fewer, longer tasks). With heavy shards, a smaller
@@ -31,7 +36,7 @@ source("scenario.R")
 # Resource settings mirror the cluster's `cpuq` partition.
 controller <- crew.cluster::crew_controller_slurm(
   name = "study-small-hpc",
-  workers = 4L,
+  workers = 120L,
   seconds_idle = 1800,
   options_cluster = crew.cluster::crew_options_slurm(
     script_lines = c(
@@ -43,10 +48,14 @@ controller <- crew.cluster::crew_controller_slurm(
     ),
     partition = "cpuq",
     cpus_per_task = 1L,
-    memory_gigabytes_per_cpu = 2,
-    # Sim-level hc shards can run for tens of minutes. Use a longer wall limit
-    # so each worker can process multiple shards before SLURM preempts it.
-    time_minutes = 360L
+    # 2 GB was too tight: workers were over-memory-killed with MaxRSS pinned at
+    # the 2 GB cap (sacct: FAILED, ExitCode 15:0), which crew reported as
+    # repeated worker crashes on an hc shard. The kill masks the true peak, so
+    # give generous headroom rather than a marginal bump.
+    memory_gigabytes_per_cpu = 8,
+    # Sim-level hc shards run ~1h40m each. A 12h wall lets a worker process
+    # several shards before SLURM preempts it, cutting relaunch churn.
+    time_minutes = 720L
   )
 )
 

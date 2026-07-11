@@ -1,5 +1,4 @@
 #!/usr/bin/env Rscript
-options(warn = 2)
 
 # make_figure.R - reproduces Images/ssdata_sims_collated.png (Figure 2) from
 # the study_small run: relative bias, scaled CI width, and coverage as a
@@ -19,12 +18,16 @@ options(warn = 2)
 suppressPackageStartupMessages({
   library(ssdsims)
   library(dplyr)
-  library(arrow)
   library(ggplot2)
   library(patchwork)
 })
 
+# Scope warn = 2 to the scenario "science" only, then restore the default - see
+# run.R / _targets.R for why (a persistent global turns benign read/plot
+# warnings fatal).
+old_warn <- options(warn = 2)
 source("scenario.R") # defines `scenario`, `true_hc`
+options(old_warn)
 
 results_dir <- ssdsims::scenario_results_dir(scenario)
 summary_path <- file.path(results_dir, "summary.parquet")
@@ -32,7 +35,15 @@ if (!file.exists(summary_path)) {
   stop("No summary.parquet found at ", summary_path, " - run `Rscript run.R` first.")
 }
 
-summary_tbl <- tibble::as_tibble(arrow::read_parquet(summary_path))
+# Read the single summary Parquet via duckplyr (already a pipeline dependency),
+# mirroring run.R - avoids the arrow package, which isn't installed on the HPC.
+# hive_partitioning = FALSE because summary.parquet is a flat, unpartitioned file.
+summary_tbl <- tibble::as_tibble(dplyr::collect(
+  duckplyr::read_parquet_duckdb(
+    summary_path,
+    options = list(hive_partitioning = FALSE)
+  )
+))
 
 hc_tasks <- ssd_scenario_hc_tasks(scenario)[, c("hc_id", "dataset", "sim", "nrow")]
 
