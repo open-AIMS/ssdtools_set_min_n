@@ -193,3 +193,36 @@ study_small uses 41; needs a design decision (intended divergence -> fix wording
 or reconcile corpora -> scenario change).
 
 ---
+
+**User:** Add relevant run details to the report as methods, plus a results
+diagnostics section (max shard time, total shards, total wall time), and a
+calculation of how long it would take on this WSL machine.
+
+**Claude:** Pulled the HPC targets metadata store (_targets/meta/meta, 2276
+targets) and analysed per-shard build times. Findings: 500 fit shards (7.9 h,
+55.2 GB output), 500 hc shards (1003.2 h total, mean ~2.0 h, longest
+hc_step_42_38 = 3.1 h), 1264 sample + summary + barriers; total serial compute
+~1011 core-hours (~42 core-days), ~55.5 GB output. At 120 workers ideal ~8.4 h
+(observed ~7 h). WSL (22 cores, 31 GB): single-core ~42 days; 22-core ideal
+~1.9 days; but hc shards need several GB each so 31 GB RAM caps concurrency to
+~4-8 -> realistic ~1-2 weeks. Added a "Computation and run environment" methods
+section and a "Run diagnostics" results section (per-step table + WSL comparison
+table) to study_small_report.qmd; re-rendered. Numbers embedded statically with
+provenance note (meta store is HPC-only, not committed).
+
+---
+
+**User:** Confirm you accessed the HPC for the data. Make the diagnostics
+reproducible and include the HPC extraction commands in the qmd.
+
+**Claude:** Confirmed: read-only rsync of _targets/meta/meta from
+hpc-l001.aims.gov.au (no changes on the HPC). Committed a per-shard extract
+run_diagnostics.csv (2276 rows: name, step, seconds, bytes, 112 KB) so the
+report computes its numbers from data. Rewrote the qmd Run-diagnostics section
+to read the CSV and compute the per-step table, totals, and WSL estimates with
+inline R (echo off); added a "Reproducing these diagnostics" subsection showing
+the rsync pull + the R parse. Re-rendered; numbers verified (1011 core-h/42
+core-days; longest hc_step_42_38 = 3.1 h; 8.4 h HPC ideal; WSL 42 d / 1.9 d /
+~14 d).
+
+---

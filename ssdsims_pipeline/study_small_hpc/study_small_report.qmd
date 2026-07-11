@@ -42,6 +42,23 @@ bootstrap. Three quantities are reported against $N$, for four HC~x~ proportions
 - **Relative CI width** — $(\text{ucl} - \text{lcl})/\text{HC}_x$
 - **Coverage** — the fraction of simulations whose CI contained the true HC~x~
 
+## Computation and run environment
+
+The simulation was run on the AIMS HPC under SLURM, orchestrated with the
+[`targets`](https://docs.ropensci.org/targets/) pipeline framework and a
+[`crew.cluster`](https://wlandau.github.io/crew.cluster/) SLURM controller: each
+work "shard" is submitted as its own SLURM job, while the driver process runs on
+a login node. Sharding is coarsened so that each of the sampling,
+distribution-fitting, and HC~x~ steps produces one shard per simulation (all 41
+datasets bundled together) — trading some parallelism for longer-lived jobs that
+suit the scheduler.
+
+Worker jobs requested 1 CPU and 8 GB RAM on the `cpuq` partition, with a 12-hour
+wall limit and a pool of up to 120 concurrent workers. The 8 GB was necessary:
+at 2 GB the HC~x~ workers were killed for exceeding memory. Fitting used R 4.4.1
+with `ssdsims`/`ssdtools`, and results were written as local Parquet. The figure
+and tables in this report were produced afterwards on a WSL workstation.
+
 ## Figure
 
 ```{r figure}
@@ -90,7 +107,127 @@ display <- summary_table |>
 kable(display, align = "lrrrrrrr")
 ```
 
+## Run diagnostics
+
+Build times are computed from a per-shard extract of the run's `targets`
+metadata store (`run_diagnostics.csv`, committed alongside this report). See
+[Reproducing these diagnostics] for exactly how that file was pulled from the
+HPC.
+
+```{r diagnostics}
+#| tbl-cap: "Per-step build diagnostics computed from the run's targets metadata."
+diag <- read.csv("run_diagnostics.csv")
+
+# Reference specs for the WSL workstation this report compares against, and the
+# run's SLURM sizing (the hc workers failed at 2 GB and ran at 8 GB).
+wsl_cores   <- 22L
+wsl_ram_gb  <- 31
+hc_shard_gb <- 8
+hpc_workers <- 120L
+
+step_order <- c("sample", "fit", "hc", "summary", "barrier")
+fmt_time <- function(h) ifelse(h < 1 / 60, "<0.1 min",
+  ifelse(h < 1, paste0(round(h * 60, 1), " min"), paste0(round(h, 1), " h")))
+
+by_step <- diag |>
+  dplyr::group_by(step) |>
+  dplyr::summarise(
+    shards  = dplyr::n(),
+    total_h = sum(seconds, na.rm = TRUE) / 3600,
+    mean_h  = mean(seconds, na.rm = TRUE) / 3600,
+    max_h   = suppressWarnings(max(seconds, na.rm = TRUE)) / 3600,
+    gb      = sum(bytes, na.rm = TRUE) / 1e9,
+    .groups = "drop"
+  ) |>
+  dplyr::mutate(step = factor(step, step_order)) |>
+  dplyr::arrange(step)
+
+# Scalars reused in the prose/estimates below.
+total_h    <- sum(diag$seconds, na.rm = TRUE) / 3600
+total_gb   <- sum(diag$bytes, na.rm = TRUE) / 1e9
+n_targets  <- nrow(diag)
+i_long     <- which.max(diag$seconds)
+long_name  <- diag$name[i_long]
+long_h     <- diag$seconds[i_long] / 3600
+get <- function(s, col) by_step[[col]][by_step$step == s]
+hc_h <- get("hc", "total_h"); hc_n <- get("hc", "shards")
+fit_h <- get("fit", "total_h"); fit_gb <- get("fit", "gb")
+
+serial_days <- total_h / 24
+ideal_h     <- total_h / wsl_cores
+ram_conc    <- floor(wsl_ram_gb / hc_shard_gb) # hc shards that fit in RAM at once
+ram_days    <- total_h / ram_conc / 24
+hpc_ideal_h <- total_h / hpc_workers
+
+by_step |>
+  dplyr::transmute(
+    Step = as.character(step),
+    Shards = format(shards, big.mark = ","),
+    `Total compute` = fmt_time(total_h),
+    `Mean / shard` = fmt_time(mean_h),
+    `Longest shard` = fmt_time(max_h),
+    Output = paste0(round(gb, 2), " GB")
+  ) |>
+  kable(align = "lrrrrr")
+```
+
+The pipeline comprised **`r format(n_targets, big.mark = ",")` targets**. The
+HC~x~ bootstrap dominates: `r hc_n` shards, ~`r round(hc_h)` core-hours in total,
+the longest (`` `r long_name` ``) taking `r round(long_h, 1)` h. Distribution
+fitting adds only ~`r round(fit_h)` core-hours but ~`r round(fit_gb)` GB of the
+`r round(total_gb, 1)` GB of output (fitted `fitdists` objects are large); the
+sampling and summary steps are negligible in both time and size. The **total
+serial compute is ~`r format(round(total_h), big.mark = ",")` core-hours
+(≈ `r round(serial_days)` core-days)**.
+
+Spread across the pool of up to `r hpc_workers` SLURM workers, that is
+~`r round(hpc_ideal_h, 1)` h of *ideal* wall time — consistent with the ~7 h
+observed for the final (post-fix) run.
+
+### What this would cost on the WSL workstation
+
+The same workload on the WSL machine (`r wsl_cores` cores, `r wsl_ram_gb` GB
+RAM), assuming comparable per-core speed:
+
+| Scenario | Estimated wall time |
+|---|---|
+| Single core (serial) | ~`r format(round(total_h), big.mark = ",")` h ≈ **`r round(serial_days)` days** |
+| All `r wsl_cores` cores, *if* memory allowed | ~`r round(ideal_h)` h ≈ **`r round(ideal_h / 24, 1)` days** |
+| Realistic (memory-bound) | ~`r round(ram_days)` days (**~`r round(ram_days / 7, 1)` weeks**) |
+
+The all-cores figure is not achievable here: each HC~x~ shard needs several GB of
+RAM, so `r wsl_ram_gb` GB caps concurrency at ~`r ram_conc` shards, not
+`r wsl_cores` — the run would be bound by memory, not cores. (If the true peak is
+below the 8 GB requested, more shards fit and the figure shrinks toward a week.)
+In short, the HPC's parallelism *and* per-node memory turned a **multi-week**
+single-workstation job into roughly **eight hours** of wall time.
+
+### Reproducing these diagnostics
+
+`run_diagnostics.csv` is a per-shard extract of the HPC run's `targets` metadata.
+To regenerate it, pull the metadata file from the HPC (read-only; from WSL):
+
+```sh
+REMOTE=/export/home/q-z/rfisher/ssdtools_set_min_n/ssdsims_pipeline/study_small_hpc
+rsync -az "rfisher@hpc-l001.aims.gov.au:$REMOTE/_targets/meta/meta" ./hpc_meta.tsv
+```
+
+then parse the pipe-delimited metadata into the committed CSV:
+
+```r
+m <- read.delim("hpc_meta.tsv", sep = "|")
+m$seconds <- as.numeric(m$seconds)
+m$bytes   <- as.numeric(m$bytes)
+m$step <- ifelse(grepl("^sample_step", m$name), "sample",
+          ifelse(grepl("^fit_step", m$name), "fit",
+          ifelse(grepl("^hc_step", m$name), "hc",
+          ifelse(grepl("^summary", m$name), "summary", "barrier"))))
+write.csv(m[, c("name", "step", "seconds", "bytes")],
+  "run_diagnostics.csv", row.names = FALSE)
+```
+
 ---
 
 *Generated from `study_small_hpc` outputs. Rebuild the figure and table with
-`Rscript make_report_outputs.R` before re-rendering.*
+`Rscript make_report_outputs.R` before re-rendering. Run-diagnostic figures are
+from the `targets` metadata of the completed HPC run.*
