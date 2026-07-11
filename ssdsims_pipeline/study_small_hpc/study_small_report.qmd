@@ -232,27 +232,39 @@ ggplot(wc, aes(true, observed, colour = N)) +
   theme_bw(base_size = 10)
 ```
 
-At **N = 5 the lnorm_lnorm mixture captures almost all of the AICc weight** —
+At **N = 5 the lnorm_lnorm mixture is handed almost all of the AICc weight** —
 mean `r round(mix5, 2)` across *every* dataset, regardless of its true mixture
-weight — which forces the five unimodal distributions to ~0 and makes the
-re-fitted weights *anti-correlated* with the truth (r = `r round(cor5, 2)`). In
-the figure this is the dark N = 5 cluster pinned near 1 in the lnorm_lnorm panel
-and on the zero floor of every unimodal panel. With only five points the flexible
-five-parameter mixture spuriously "wins".
+weight — which drives the five unimodal distributions to ~0 and leaves the
+re-fitted weights *anti-correlated* with the truth (r = `r round(cor5, 2)`; the
+dark N = 5 cluster near 1 in the lnorm_lnorm panel and on the zero floor of every
+unimodal panel).
 
-From **N = 6 the mixture is correctly penalised** to essentially zero (mean
-`r round(mix6, 3)`) — except for the one genuinely bimodal dataset
-(`anzg_iron_marine`), which earns high mixture weight only at larger N — and the
-unimodal weights begin to track their true values: the correlation climbs from
-`r round(cor6, 2)` (N = 6) to `r round(cor26, 2)` (N = 26).
+**This is not the mixture fitting better — it is the AICc small-sample correction
+breaking down.** AICc adds $\frac{2k(k+1)}{n-k-1}$ to AIC, and for the
+five-parameter mixture ($k = 5$) that denominator is non-positive at small N. At
+$n = 5$ it is $-1$, so the correction is $2\cdot5\cdot6/(-1) = -60$ and the
+mixture's AICc is spuriously *lowered* (to about $-55$ in a worked fit) — a reward
+rather than a penalty — so it wins every comparison and takes weight $\approx 1$.
+At $n = 6$ the denominator is $0$, its AICc is $+\infty$, and its weight is
+forced to exactly 0. The correction is only defined for $n \ge k + 2$, i.e.
+**$N \ge 7$ for a five-parameter model**, so the N = 5 and N = 6 mixture weights
+are degenerate artefacts of the criterion, not evidence about fit.
 
-Recovery is directional but **incomplete**: even at N = 26 the points sit below
-the y = x line, because model averaging over six candidates spreads the weight
-and the real-data weights are themselves diffuse (only one dataset exceeds 0.9,
-above). The message mirrors both the coverage result and the original study's
-Figure 4B: the mixture should be preferred only with genuine bimodality *and*
-adequate N, and N = 5 is again a distinct failure regime — here, spurious
-mixture dominance.
+From **N = 7 the mixture weight becomes meaningful**: AICc penalises it properly
+and it earns appreciable weight only for the one genuinely bimodal dataset
+(`anzg_iron_marine`). Freed from the mixture, the unimodal weights begin to track
+their true values as N grows — the observed-vs-true correlation rising from
+`r round(cor6, 2)` (N = 6) to `r round(cor26, 2)` (N = 26). Even then recovery is
+**incomplete** (points sit below the y = x line at N = 26), because model
+averaging over six candidates spreads the weight and the real-data weights are
+themselves diffuse (only one dataset exceeds 0.9, above).
+
+The practical messages are two. First, an AICc-weighted candidate set should not
+include a distribution with $k \ge N - 1$ parameters — for the five-parameter
+mixture that means excluding it below $N = 7$ — or the weights are meaningless.
+Second, this AICc degeneracy is one concrete mechanism behind the poor N = 5
+behaviour seen in the bias/coverage results above: at N = 5 the model-averaged
+estimate is dominated by a mixture that the criterion has erroneously rewarded.
 
 ## Run diagnostics
 

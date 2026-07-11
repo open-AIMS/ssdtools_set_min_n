@@ -248,3 +248,19 @@ by N. Key finding: at N=5 the lnorm_lnorm mixture spuriously grabs ~0.96 mean
 weight across all datasets (obs anti-correlated with truth, r=-0.30), collapses to
 ~0 at N=6, and unimodal weights track truth better as N grows (r 0.53->0.82);
 recovery incomplete even at N=26. Reinforces the N=6 recommendation. Re-rendered.
+
+**User:** The N=5 lnorm_lnorm mixture dominance is extremely strange - a 5-param
+distribution should have LOW weight, lower at small N, not higher. Are you sure
+there isn't a mistake?
+
+**Claude:** Investigated by decoding a real N=5 fit on the HPC and printing the
+full ssdtools glance() - no extraction bug. It is an AICc small-sample-correction
+degeneracy: AICc = AIC + 2k(k+1)/(n-k-1). For the 5-param mixture (k=5) at n=5 the
+denominator is -1, so the correction is -60 and AICc = 4.98-60 = -55 (a REWARD),
+giving weight ~1; at n=6 the denominator is 0 so AICc=+Inf and weight=0; AICc is
+only defined for n>=k+2, i.e. N>=7 for the mixture. So the N=5/6 mixture weights
+are degenerate artefacts of the criterion, not evidence of fit. Rewrote the Part C
+interpretation to explain this precisely (formula, -60/+Inf values, n>=k+2 rule,
+and that a candidate set shouldn't include a k>=N-1 distribution). This also
+explains part of the poor N=5 coverage. NOTE: worth guarding in ssdtools itself -
+glance/ssd_gof returns aicc=-55 (finite reward) at n=k rather than Inf/NA.
