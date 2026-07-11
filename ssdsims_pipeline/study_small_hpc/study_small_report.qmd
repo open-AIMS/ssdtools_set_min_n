@@ -83,10 +83,17 @@ signal that a small sample cannot pin down an extreme lower-tail quantile.
 
 **Bias is dominated by a heavy positive tail.** Median bias is modest, but the
 upper tail reaches order 10^8^ at the smallest N and lowest proportions (visible
-as the long whiskers in the top row). One pattern worth noting: for **HC1**, the
-median bias is **+2.05 at $N = 5$**, flips **negative (−0.24 to −0.32) at
-$N = 6$–10**, then returns toward zero — a non-monotonic trend that reflects the
-small-N model-averaging / fallback behaviour rather than a smooth decline.
+as the long whiskers in the top row). For **HC1** the median bias is
+**+2.05 at $N = 5$**, flips **negative (−0.24 to −0.32) at $N = 6$–10**, then
+returns toward zero. This non-monotonicity is a **direct consequence of the AICc
+mixture degeneracy** documented in [Refitted vs. true distribution weights]: at
+$N = 5$, 95.5% of the model-averaged HC estimates (78,272 of 82,000) collapse
+onto the `lnorm_lnorm` mixture that AICc erroneously rewards when $n = k$,
+producing the large positive bias; at $N = 6$ the mixture's AICc weight is forced
+to zero, every estimate reverts to a unimodal average, and the bias flips sign.
+The apparent "non-monotonic recovery" is therefore an artefact of the criterion
+switching regimes between $N = 5$ and $N = 6$, not a property of the estimator
+itself.
 
 **Takeaway.** Across all three metrics, $N = 5$ is a distinct failure regime and
 $N = 6$ is the point at which behaviour becomes substantially more reliable,
