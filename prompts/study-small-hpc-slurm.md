@@ -293,3 +293,22 @@ mixture" - pipeline + committed summary CSV and coverage PNG (written into the f
 git-ignored ../output). Verified no large files staged.
 
 ---
+
+---
+
+**User:** Is everything reproducible and documented in report.qmd? -> Gap 1 plus option A.
+
+**Claude:** Audited reproducibility and found two gaps. Gap 1: report.qmd's headline
+figure + main summary table lived in git-ignored ../output and derived from the git-ignored
+summary.parquet, so a clean checkout hard-failed at the setup stopifnot. Fixed by writing
+(make_report_outputs.R) and reading (qmd) study_small_report_figure.png and
+study_small_summary_table.csv from study_small_hpc/ itself, and committing them - matching the
+committed-CSV convention. Gap 2: the small_study result was not in the report. Added a
+"Without the mixture: is the N=5 cliff real?" section reading the committed small_study CSV +
+coverage PNG (coverage table by N, figure, interpretation: cliff is largely a mixture artefact,
+gap shrinks to a gradual ~2 points, all cells still under-cover ~0.85-0.90, N=5 least precise),
+and qualified the earlier N=5 takeaway with a forward reference. Verified the report renders via
+`quarto render` from committed inputs only (exit 0, section present, no unresolved inline r).
+Committed as "Make report self-contained and fold in the mixture-removed result".
+
+---
