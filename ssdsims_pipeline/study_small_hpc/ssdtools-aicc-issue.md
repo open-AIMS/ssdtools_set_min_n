@@ -51,8 +51,10 @@ glance(fit, wt = TRUE)[, c("dist", "npars", "nobs", "aic", "aicc", "delta", "wt"
 The 5-parameter mixture has the *worst* AIC (28.0) but the *best* AICc (−32.0),
 because its correction term is `2*5*6 / (5 - 5 - 1) = -60`.
 
-For contrast, at `n = 6` the same mixture gives `AICc = Inf` (`wt = 0`), and at
-`n = 7` it is properly penalised (`aicc ≈ 97`, `wt ≈ 1e-14`).
+For contrast, at `n = 6` the same mixture gives `AICc = Inf` (`wt = 0`), and from
+`n = 7` (`n >= k + 2`) its AICc is finite and heavily penalised, so its weight is
+negligible (`wt ≈ 1e-14`; the exact `aicc` is data-dependent — e.g. ~116 on a
+natural 7-point extension of the data above).
 
 ## Why it matters
 
