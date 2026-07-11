@@ -17,6 +17,8 @@ execute:
 ```{r setup}
 library(knitr)
 library(dplyr)
+library(tidyr)
+library(ggplot2)
 
 # Reads the artifacts written by make_report_outputs.R (run that first):
 #   ../output/study_small_report_figure.png
@@ -106,6 +108,151 @@ display <- summary_table |>
 
 kable(display, align = "lrrrrrrr")
 ```
+
+## Source-distribution AICc weights
+
+Each dataset's simulations were generated from its own top-AICc-weighted BCANZ
+distribution — its "source" distribution. How cleanly a dataset represents a
+single distribution is itself informative, and it determines whether we can
+isolate per-distribution behaviour (as in Figure 4 of the original study). The
+per-dataset weights are extracted from the cached fits into
+`dataset_aicc_weights.csv`.
+
+```{r weights}
+#| tbl-cap: "For each BCANZ distribution: how many of the 41 datasets it is the top-weighted (source) distribution for, and the single dataset where it attains its highest AICc weight."
+w <- read.csv("dataset_aicc_weights.csv")
+dists_bcanz <- c("gamma", "lgumbel", "llogis", "lnorm", "lnorm_lnorm", "weibull")
+
+wt_summary <- do.call(rbind, lapply(dists_bcanz, function(d) {
+  i <- which.max(w[[d]])
+  data.frame(
+    Distribution = d,
+    `Datasets sourced` = sum(w$source_dist == d),
+    `Most representative dataset` = w$dataset[i],
+    `Max AICc weight` = round(w[[d]][i], 3),
+    check.names = FALSE
+  )
+}))
+kable(wt_summary, align = "lrlr")
+
+mix_i <- which.max(w$lnorm_lnorm)
+mix_ds <- w$dataset[mix_i]; mix_wt <- w$lnorm_lnorm[mix_i]
+uni <- setdiff(dists_bcanz, "lnorm_lnorm")
+uni_max <- vapply(uni, function(d) max(w[[d]]), numeric(1))
+```
+
+Across the 41 ssddata datasets, only the **lnorm_lnorm mixture has a near-pure
+representative** (`` `r mix_ds` ``, weight `r round(mix_wt, 2)`); for the five
+unimodal distributions the best any single dataset reaches is only
+`r round(min(uni_max), 2)`–`r round(max(uni_max), 2)`, so no ssddata dataset is
+unambiguously one distribution. This is why the original study drew on the much
+larger 353-dataset EnviroTox corpus — to find clean, high-weight representatives
+of each source distribution. The full 41 × 6 weight matrix is in
+`dataset_aicc_weights.csv`.
+
+## Refitted vs. true distribution weights
+
+The original study's Figure 4 simulated from each dataset's single *true* source
+distribution and tracked how the AICc weight of that distribution grew with N.
+Our study simulates from the model-averaged *multi* fit (all six components,
+weighted by their real-data AICc weights), so there is no single "true" source
+per dataset — instead each dataset has a *vector* of true weights. The natural
+analogue is therefore to ask: **as N grows, do the re-fitted AICc weights recover
+the original (real-data) weights?** Below, each point is one dataset at one N:
+its observed mean re-fitted weight for a distribution (averaged over the 500
+simulations) against that distribution's true weight from the real-data fit.
+
+These weights are a fit-step property not present in `summary.parquet`; they are
+extracted from the 55 GB of `fit` shards on the HPC by decoding each shard's
+serialised `fitdists` and reading `ssdtools::glance(wt = TRUE)`. That extraction
+(`extract_fit_weights.R`) is run as a SLURM job and its small result CSV pulled
+to WSL — the 55 GB never leaves the cluster:
+
+```sh
+# on the HPC (from study_small_hpc/):
+module load R/4.4.1 slurm
+sbatch extract_fit_weights.sbatch      # ~20-25 min on 8 cores -> fit_weights_observed.csv
+
+# then from WSL, pull the compact result (not the shards):
+REMOTE=/export/home/q-z/rfisher/ssdtools_set_min_n/ssdsims_pipeline/study_small_hpc
+rsync -az "rfisher@hpc-l001.aims.gov.au:$REMOTE/fit_weights_observed.csv" ./
+```
+
+The raw extract (`fit_weights_observed.csv`, ~20 MB, one row per fit) is
+regenerable and git-ignored; it is aggregated once to the committed
+`fit_weights_summary.csv` (mean weight per dataset × N × distribution) that the
+figure below reads:
+
+```r
+library(dplyr); library(tidyr)
+dists <- c("gamma", "lgumbel", "llogis", "lnorm", "lnorm_lnorm", "weibull")
+read.csv("fit_weights_observed.csv") |>
+  pivot_longer(all_of(dists), names_to = "distribution", values_to = "weight") |>
+  group_by(dataset, nrow, distribution) |>
+  summarise(mean_weight = mean(weight), sd_weight = sd(weight), n_sims = n(),
+    .groups = "drop") |>
+  write.csv("fit_weights_summary.csv", row.names = FALSE)
+```
+
+```{r weights-convergence}
+#| fig-cap: "Observed mean re-fitted AICc weight (averaged over 500 simulations per dataset and N) versus the true weight from the real-data fit, for each of the six BCANZ distributions. One point per dataset per N; the dashed line is y = x (observed = true)."
+#| fig-width: 9
+#| fig-height: 6
+dists_bcanz <- c("gamma", "lgumbel", "llogis", "lnorm", "lnorm_lnorm", "weibull")
+
+obs_long <- read.csv("fit_weights_summary.csv") |>
+  transmute(dataset, nrow, distribution, observed = mean_weight)
+
+true_long <- read.csv("dataset_aicc_weights.csv") |>
+  pivot_longer(all_of(dists_bcanz), names_to = "distribution", values_to = "true") |>
+  select(dataset, distribution, true)
+
+wc <- left_join(obs_long, true_long, by = c("dataset", "distribution")) |>
+  mutate(
+    distribution = factor(distribution, dists_bcanz),
+    N = factor(nrow, levels = sort(unique(nrow)))
+  )
+
+# convergence summaries referenced in the text below
+cor_by_n <- wc |> group_by(N) |> summarise(r = cor(observed, true), .groups = "drop")
+mix_by_n <- wc |> filter(distribution == "lnorm_lnorm") |> group_by(N) |>
+  summarise(m = mean(observed), .groups = "drop")
+gv <- function(df, col, n) df[[col]][df$N == n]
+cor5 <- gv(cor_by_n, "r", "5"); cor6 <- gv(cor_by_n, "r", "6"); cor26 <- gv(cor_by_n, "r", "26")
+mix5 <- gv(mix_by_n, "m", "5"); mix6 <- gv(mix_by_n, "m", "6")
+
+ggplot(wc, aes(true, observed, colour = N)) +
+  geom_abline(slope = 1, intercept = 0, linetype = 2, colour = "grey50") +
+  geom_point(size = 0.8, alpha = 0.7) +
+  facet_wrap(~distribution) +
+  coord_equal(xlim = c(0, 1), ylim = c(0, 1)) +
+  scale_colour_viridis_d(option = "C", end = 0.9) +
+  labs(x = "True AICc weight (real-data fit)",
+    y = "Observed mean re-fitted AICc weight") +
+  theme_bw(base_size = 10)
+```
+
+At **N = 5 the lnorm_lnorm mixture captures almost all of the AICc weight** —
+mean `r round(mix5, 2)` across *every* dataset, regardless of its true mixture
+weight — which forces the five unimodal distributions to ~0 and makes the
+re-fitted weights *anti-correlated* with the truth (r = `r round(cor5, 2)`). In
+the figure this is the dark N = 5 cluster pinned near 1 in the lnorm_lnorm panel
+and on the zero floor of every unimodal panel. With only five points the flexible
+five-parameter mixture spuriously "wins".
+
+From **N = 6 the mixture is correctly penalised** to essentially zero (mean
+`r round(mix6, 3)`) — except for the one genuinely bimodal dataset
+(`anzg_iron_marine`), which earns high mixture weight only at larger N — and the
+unimodal weights begin to track their true values: the correlation climbs from
+`r round(cor6, 2)` (N = 6) to `r round(cor26, 2)` (N = 26).
+
+Recovery is directional but **incomplete**: even at N = 26 the points sit below
+the y = x line, because model averaging over six candidates spreads the weight
+and the real-data weights are themselves diffuse (only one dataset exceeds 0.9,
+above). The message mirrors both the coverage result and the original study's
+Figure 4B: the mixture should be preferred only with genuine bimodality *and*
+adequate N, and N = 5 is again a distinct failure regime — here, spurious
+mixture dominance.
 
 ## Run diagnostics
 

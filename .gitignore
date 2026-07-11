@@ -56,3 +56,5 @@ po/*~
 rsconnect/
 
 *.html
+# Regenerable raw fit-weight extract (aggregate to fit_weights_summary.csv)
+**/fit_weights_observed.csv

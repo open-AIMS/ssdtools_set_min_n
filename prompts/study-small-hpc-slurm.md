@@ -226,3 +226,25 @@ core-days; longest hc_step_42_38 = 3.1 h; 8.4 h HPC ideal; WSL 42 d / 1.9 d /
 ~14 d).
 
 ---
+
+**User:** (clarified) study_small simulates from the multi method, not single true
+distributions, so we can't replicate Figure 4 exactly. Demonstrate extracting the
+refit weights; extract per 41 datasets; plot observed refitted weights for the six
+distributions against the true original weight across N. Keep everything
+reproducible with code/commands in the qmd (a complete worked case study).
+
+**Claude:** Part A: extracted per-dataset AICc weights from cache/fits.rds ->
+dataset_aicc_weights.csv; only lnorm_lnorm has a near-pure representative
+(anzg_iron_marine 0.92), the 5 unimodal top out at 0.40-0.72. Part B: added a
+Source-distribution AICc weights section (table + finding). Part C: weights are a
+fit-step property absent from summary.parquet, so wrote extract_fit_weights.R
+(decode each fit shard's serialised fitdists -> glance(wt=TRUE)) + a parallel
+extract_fit_weights.sbatch; ran it as SLURM job 856911 (8 cores, 32 min, 143500
+rows), pulled fit_weights_observed.csv (20 MB, gitignored), aggregated to
+committed fit_weights_summary.csv (1722 rows). Added a "Refitted vs true
+distribution weights" section: documents the sbatch/rsync/aggregate steps and
+plots observed mean refit weight vs true weight, faceted by distribution, coloured
+by N. Key finding: at N=5 the lnorm_lnorm mixture spuriously grabs ~0.96 mean
+weight across all datasets (obs anti-correlated with truth, r=-0.30), collapses to
+~0 at N=6, and unimodal weights track truth better as N grows (r 0.53->0.82);
+recovery incomplete even at N=26. Reinforces the N=6 recommendation. Re-rendered.
