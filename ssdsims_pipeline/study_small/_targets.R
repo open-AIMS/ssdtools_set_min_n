@@ -1,6 +1,6 @@
 options(warn = 2)
 
-# _targets.R - the 20-dataset bias/coverage/CI-width scenario, run fully
+# _targets.R - the 41-dataset bias/coverage/CI-width scenario, run fully
 # locally: a `crew` local controller (mirai-backed persistent workers), no
 # SLURM, no cloud upload. `ssd_scenario_targets()` is called with no
 # `upload =` argument, so results stay as local Parquet files under the

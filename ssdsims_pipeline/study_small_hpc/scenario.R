@@ -1,8 +1,8 @@
-# scenario.R - the 20-dataset bias/coverage/CI-width study (reproduces
+# scenario.R - the 41-dataset bias/coverage/CI-width study (reproduces
 # Images/ssdata_sims_collated.png), sourced by _targets.R to build the
 # crew-local targets pipeline.
 #
-# Methodology (matches min_sample_size.Rmd): for each of the 20 ssddata
+# Methodology (matches min_sample_size.Rmd): for each of the 41 ssddata
 # example datasets, fit the BCANZ default distributions and take the
 # top-AICc-weighted distribution as the "true" data-generating model.
 # ssd_gen() does exactly this when given a multi-distribution `fitdists`
@@ -25,7 +25,7 @@ dataset_names <- names(ssd_data_sets(c("anzg", "ccme")))
 # HC proportions matching Figure 2's three columns (0.01, 0.05, 0.1, 0.2).
 proportions <- c(0.01, 0.05, 0.1, 0.2)
 
-# ---- fit the 20 datasets (cached) ------------------------------------------
+# ---- fit the 41 datasets (cached) ------------------------------------------
 
 if (!dir.exists("cache")) {
   dir.create("cache", recursive = TRUE)
@@ -84,9 +84,9 @@ scenario <- ssd_define_scenario(
   # nsim: original study used 1000. ssd_estimate_cost() is a poor guide here -
   # it badly underestimates wall time for this scenario shape, because each
   # hc shard bundles all nrow/proportion/bootstrap work. To further avoid
-  # millisecond-scale shards on HPC, partitioning below bundles ALL 20 datasets
+  # millisecond-scale shards on HPC, partitioning below bundles ALL 41 datasets
   # into each sim-level shard (fit + hc). So serial cost is approximately
-  # nsim x (20 datasets x per-(dataset, sim) hc cost). With prior measurements
+  # nsim x (41 datasets x per-(dataset, sim) hc cost). With prior measurements
   # around ~2.2-2.5 min per (dataset, sim) hc task, each sim shard is on the
   # order of ~45-50 minutes and should be long-lived enough for SLURM.
   nsim = 500L,

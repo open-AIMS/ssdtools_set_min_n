@@ -1,8 +1,8 @@
-# scenario.R - the 20-dataset bias/coverage/CI-width study (reproduces
+# scenario.R - the 41-dataset bias/coverage/CI-width study (reproduces
 # Images/ssdata_sims_collated.png), sourced by _targets.R to build the
 # crew-local targets pipeline.
 #
-# Methodology (matches min_sample_size.Rmd): for each of the 20 ssddata
+# Methodology (matches min_sample_size.Rmd): for each of the 41 ssddata
 # example datasets, fit the BCANZ default distributions and take the
 # top-AICc-weighted distribution as the "true" data-generating model.
 # ssd_gen() does exactly this when given a multi-distribution `fitdists`
@@ -25,7 +25,7 @@ dataset_names <- names(ssd_data_sets(c("anzg", "ccme")))
 # HC proportions matching Figure 2's three columns (0.05, 0.1, 0.2).
 proportions <- c(0.01, 0.05, 0.1, 0.2)
 
-# ---- fit the 20 datasets (cached) ------------------------------------------
+# ---- fit the 41 datasets (cached) ------------------------------------------
 
 if (!dir.exists("cache")) {
   dir.create("cache", recursive = TRUE)
@@ -86,7 +86,7 @@ scenario <- ssd_define_scenario(
   # hc shard bundles ALL 7 nrow values x 3 proportions x nboot=1000 into ONE
   # task (the default hc bundle/partition_by), not one task per cell. Measured
   # directly: ~2.2-2.5 min per (dataset, sim) hc task regardless of nrow, so
-  # total serial cost is ~ 20 datasets x nsim x 2.5 min. nsim = 15 below is
+  # total serial cost is ~ 41 datasets x nsim x 2.5 min. nsim = 15 below is
   # ~2.78 x 15 =~ 42 min wall time at the 18 workers _targets.R configures (no
   # contention from other jobs on the machine). Raise nsim and budget
   # accordingly; re-time a small pilot (nsim = 2L or 3L) after any change to

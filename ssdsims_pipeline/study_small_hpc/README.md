@@ -1,14 +1,16 @@
 # study_small_hpc
 
 Same study as [`../study_small/`](../study_small) - Figure 2
-(`ssdata_sims_collated.png`), the 20-dataset bias/coverage/CI-width scenario -
+(`ssdata_sims_collated.png`), the 41-dataset bias/coverage/CI-width scenario -
 but run on the **HPC via SLURM** instead of locally on WSL.
 
 The only difference from `study_small` is the controller in `_targets.R`:
 `crew::crew_controller_local()` is replaced with a SLURM-backed
 [`crew.cluster::crew_controller_slurm()`](https://wlandau.github.io/crew.cluster/).
-`scenario.R` and `make_figure.R` are byte-for-byte the science from
-`study_small` - the backend change does not touch the simulation.
+`scenario.R` is byte-for-byte the science from `study_small` - the backend
+change does not touch the simulation. `make_figure.R` differs only in how it
+reads the summary Parquet: `duckplyr` (a pipeline dependency) instead of
+`arrow`, so no extra package is needed on the HPC.
 
 ## Key constraint: run the driver on a submit node
 
@@ -21,8 +23,10 @@ small interactive `srun` session that has `sbatch` available).
 ## Worker resources
 
 Set in `_targets.R` via `crew_options_slurm()`, mirroring the cluster's `cpuq`
-partition: 1 cpu/task, 2 GB/cpu, 180 min wall per worker job, `--nice=6000`,
-`workers = 8`, `seconds_idle = 900`.
+partition: 1 cpu/task, 8 GB/cpu, 720 min wall per worker job, `--nice=6000`,
+`workers = 4`, `seconds_idle = 1800`. Memory was raised from 2 GB after workers
+were over-memory-killed on the hc shards (MaxRSS pinned at the 2 GB cap); if your
+allocation is tight, 4 GB may suffice, but the true peak is masked by the kill.
 
 Scenario sharding is intentionally coarsened in `scenario.R` with
 `partition_by = list(fit = "sim", hc = "sim")`, so each shard includes all 20
@@ -41,6 +45,22 @@ Rscript check_prereqs.R   # packages, sbatch on PATH, controller, scenario, cost
 Rscript run.R             # tar_make() - submits workers as SLURM jobs
 Rscript make_figure.R     # writes ../output/ssdata_sims_collated.png
 ```
+
+**Temp space.** Login-node `/tmp` is often small and shared; when it fills, the
+final combine crashes with a `gzfile ... No space left on device` error while
+`callr` serialises the `tar_make()` subprocess result. `run.R` redirects child
+processes' tempdir to `$SCRATCH` (or `$HOME/scratch/rtmp`; override with
+`SSDSIMS_TMPDIR`), but R fixes the driver session's own `tempdir()` at startup,
+so export a roomy tempdir before launching for full cover:
+
+```sh
+export TMPDIR="$SCRATCH/rtmp"   # or any scratch path with space
+mkdir -p "$TMPDIR"
+Rscript run.R
+```
+
+The completed shards are cached, so re-running after a temp-space crash skips
+all the simulation work and only rebuilds the final `summary` target.
 
 `check_prereqs.R` additionally verifies `crew.cluster` is installed and that
 `sbatch` resolves on PATH (i.e. you really are on a submit node).

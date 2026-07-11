@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 options(warn = 2)
 
-# Driver: build the 20-dataset bias/coverage/CI-width scenario through a
+# Driver: build the 41-dataset bias/coverage/CI-width scenario through a
 # local crew controller, then point at make_figure.R to build the plot.
 #
 # Usage (from inside ssdsims_pipeline/study_small/):

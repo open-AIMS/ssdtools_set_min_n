@@ -1,0 +1,96 @@
+---
+title: "Minimum sample size for SSD HC~x~ estimation"
+subtitle: "Small-N bias, confidence-interval width, and coverage from the `study_small_hpc` simulation"
+date: today
+format:
+  html:
+    toc: true
+    fig-align: center
+    df-print: kable
+    embed-resources: true
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r setup}
+library(knitr)
+library(dplyr)
+
+# Reads the artifacts written by make_report_outputs.R (run that first):
+#   ../output/study_small_report_figure.png
+#   ../output/study_small_summary_table.csv
+fig_path <- "../output/study_small_report_figure.png"
+tbl_path <- "../output/study_small_summary_table.csv"
+stopifnot(file.exists(fig_path), file.exists(tbl_path))
+
+summary_table <- read.csv(tbl_path)
+```
+
+## Study design
+
+For each of 41 ANZG/CCME example datasets (34 ANZG, 7 CCME — all such datasets in
+`ssddata`), the top-AICc-weighted distribution was treated as the
+data-generating "truth". For every dataset, 500 samples of each size
+$N \in \{5, 6, 7, 8, 10, 16, 26\}$ were drawn and re-fit with the model-averaged
+("multi") method, with 95% confidence intervals from a weighted-sample
+bootstrap. Three quantities are reported against $N$, for four HC~x~ proportions
+(HC1, HC5, HC10, HC20):
+
+- **Relative bias** — $(\hat{}\text{HC}_x - \text{HC}_x)/\text{HC}_x$
+- **Relative CI width** — $(\text{ucl} - \text{lcl})/\text{HC}_x$
+- **Coverage** — the fraction of simulations whose CI contained the true HC~x~
+
+## Figure
+
+```{r figure}
+#| fig-cap: "HC~x~ estimation versus sample size, faceted by HC proportion. Red boxes mark N ≤ 6. Relative bias is on a symmetric-log axis (it is signed, spanning −1 to ~10^8^); relative CI width is on a log10 axis; coverage is linear, with the dashed line at the nominal 0.95."
+include_graphics(fig_path)
+```
+
+## Interpretation
+
+**Coverage collapses at N = 5.** Coverage of the true HC~x~ falls to 0.58 (HC1)
+through 0.78 (HC20) at $N = 5$ — well below the nominal 0.95 — then jumps to
+roughly 0.87–0.89 at $N = 6$ and creeps up to about 0.93–0.94 by $N = 26$.
+$N = 5$ is clearly the deficient case; $N = 6$ already recovers most of the lost
+coverage.
+
+**Confidence intervals are enormous at small N.** The median relative CI width
+is about 41× the true HC1 value at $N = 5$, falling to roughly 3.9× at
+$N = 26$. Even at $N = 26$ the low-proportion intervals remain wide — the honest
+signal that a small sample cannot pin down an extreme lower-tail quantile.
+
+**Bias is dominated by a heavy positive tail.** Median bias is modest, but the
+upper tail reaches order 10^8^ at the smallest N and lowest proportions (visible
+as the long whiskers in the top row). One pattern worth noting: for **HC1**, the
+median bias is **+2.05 at $N = 5$**, flips **negative (−0.24 to −0.32) at
+$N = 6$–10**, then returns toward zero — a non-monotonic trend that reflects the
+small-N model-averaging / fallback behaviour rather than a smooth decline.
+
+**Takeaway.** Across all three metrics, $N = 5$ is a distinct failure regime and
+$N = 6$ is the point at which behaviour becomes substantially more reliable,
+consistent with $N = 5$ being the boundary this study set out to probe.
+
+## Summary table
+
+```{r table}
+#| tbl-cap: "Coverage, median relative bias (with interquartile range), and median relative CI width by HC proportion and sample size. Metric values are rounded to 3 significant figures."
+display <- summary_table |>
+  mutate(
+    HC = paste0("HC", 100 * proportion),
+    across(c(coverage, bias_median, bias_q25, bias_q75, width_median),
+      \(x) signif(x, 3))
+  ) |>
+  select(HC, N = nrow, Sims = n_sims, Coverage = coverage,
+    `Median bias` = bias_median, `Bias Q25` = bias_q25,
+    `Bias Q75` = bias_q75, `Median CI width` = width_median)
+
+kable(display, align = "lrrrrrrr")
+```
+
+---
+
+*Generated from `study_small_hpc` outputs. Rebuild the figure and table with
+`Rscript make_report_outputs.R` before re-rendering.*

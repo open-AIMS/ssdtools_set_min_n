@@ -21,7 +21,7 @@ ssdsims_pipeline/
 |-- 01_fit_example_datasets.R   Figure 1 (fitted_dists.png) - plain ssdtools,
 |                                no simulation framework needed
 |-- study_small/                Figure 2 (ssdata_sims_collated.png):
-|   |-- scenario.R                 the 20 ssddata datasets, ci = TRUE
+|   |-- scenario.R                 all 41 anzg+ccme ssddata datasets, ci = TRUE
 |   |-- _targets.R                 crew local controller + ssd_scenario_targets()
 |   |-- check_prereqs.R            run first: packages, scenario, cost estimate
 |   |-- run.R                      tar_make() driver
@@ -56,7 +56,7 @@ Fits the BCANZ default distributions (gamma, lgumbel, llogis, lnorm,
 lnorm_lnorm, weibull) to the 20 ssddata "v1" example datasets and writes
 `output/fitted_dists.png`.
 
-## Step 2 - Figure 2: the 20-dataset study
+## Step 2 - Figure 2: the 41-dataset study
 
 ```sh
 cd ssdsims_pipeline/study_small
@@ -70,7 +70,7 @@ To run this same study on the HPC via SLURM instead of locally, see
 but the `_targets.R` controller is `crew.cluster::crew_controller_slurm()`
 and the driver runs on a submit node.
 
-`scenario.R` fits each of the 20 datasets, takes each one's own
+`scenario.R` fits each of the 41 datasets, takes each one's own
 top-AICc-weighted BCANZ distribution as its "true" generating model (the
 same selection `ssd_gen()` makes internally for a multi-distribution
 `fitdists` input - see `?ssd_gen`), and resamples from it across
