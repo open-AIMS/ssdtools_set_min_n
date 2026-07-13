@@ -16,6 +16,10 @@ execute:
   message: false
 ---
 
+<!-- TODO (Stage 3): add a short scope / author-role note — the report's author
+     is a co-author of both Warne et al. (2025) and the ssdtools package, and
+     authored the 2024 addendum and its (now unavailable) simulation code. -->
+
 ```{r setup}
 library(knitr)
 library(dplyr)
