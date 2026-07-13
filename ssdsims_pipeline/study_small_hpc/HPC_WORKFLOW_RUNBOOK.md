@@ -1,4 +1,4 @@
-# HPC `targets` + `crew.cluster` Pipeline Runbook
+## HPC `targets` + `crew.cluster` Pipeline Runbook
 
 A step-by-step, reusable guide for running a `targets` simulation pipeline on a
 SLURM HPC via a `crew.cluster` controller, then pulling the results back to WSL
@@ -11,7 +11,7 @@ own.
 
 ---
 
-## 0. Architecture in one paragraph
+### 0. Architecture in one paragraph
 
 `targets` builds a dependency graph of "shards". A `crew.cluster::crew_controller_slurm()`
 controller launches **each worker as its own `sbatch` job**; workers connect back
@@ -33,9 +33,9 @@ Key files in the workflow directory:
 
 ---
 
-## Part A — Run the pipeline on the HPC
+### Part A — Run the pipeline on the HPC
 
-### A1. Get the code onto the HPC
+#### A1. Get the code onto the HPC
 
 Via git (if the HPC can reach your remote) or `scp` from WSL:
 
@@ -49,7 +49,7 @@ scp -r ssdsims_pipeline/study_small_hpc \
 > a later `scp` of the whole file from WSL will clobber those edits. Either edit
 > one line in place on the HPC, or keep WSL as the single source of truth.
 
-### A2. SSH to the **login** node
+#### A2. SSH to the **login** node
 
 ```sh
 ssh rfisher@hpc-l001.aims.gov.au       # login node = can submit sbatch jobs
@@ -58,7 +58,7 @@ cd ~/ssdtools_set_min_n/ssdsims_pipeline/study_small_hpc
 
 Confirm you can submit jobs from here: `command -v sbatch` should resolve.
 
-### A3. Redirect temp space **before** running (CRITICAL)
+#### A3. Redirect temp space **before** running (CRITICAL)
 
 Login-node `/tmp` is often small and shared. When it fills, `callr` (used by
 `tar_make()`) fails to serialise a subprocess result and the run dies with
@@ -76,7 +76,7 @@ rm -rf /tmp/Rtmp* 2>/dev/null          # only removes your own leftovers
 > R fixes `tempdir()` at startup from `TMPDIR`, so this **must** be exported in the
 > shell *before* `Rscript`, not set inside R.
 
-### A4. Check prerequisites, then run
+#### A4. Check prerequisites, then run
 
 ```sh
 Rscript check_prereqs.R    # packages, sbatch on PATH, controller, scenario, cost
@@ -93,7 +93,7 @@ results dir     : results/seed=42/layout=5b3e1f4f4da3
 **Re-running is safe and cheap** — completed shards are cached, so a re-run after
 a crash skips the finished work (`N skipped`) and only rebuilds what failed.
 
-### A5. Worker resources — where to tune (`_targets.R`)
+#### A5. Worker resources — where to tune (`_targets.R`)
 
 Inside `crew_controller_slurm()` / `crew_options_slurm()`:
 
@@ -109,14 +109,14 @@ Inside `crew_controller_slurm()` / `crew_options_slurm()`:
 
 ---
 
-## Part B — Diagnosing the failures we actually hit
+### Part B — Diagnosing the failures we actually hit
 
-### B1. `gzfile ... No space left on device` → temp space
+#### B1. `gzfile ... No space left on device` → temp space
 
 Cause: login-node `/tmp` filled during the final combine.
 Fix: the `TMPDIR` export in **A3** + `rm -rf /tmp/Rtmp*`, then re-run.
 
-### B2. A benign warning became a fatal error → `options(warn = 2)`
+#### B2. A benign warning became a fatal error → `options(warn = 2)`
 
 If the driver/pipeline files start with a global `options(warn = 2)`, it promotes
 *any* warning (including the disk warning above) to a hard error. Scope it to just
@@ -128,7 +128,7 @@ source("scenario.R")      # the part where a numeric warning is a real problem
 options(old_warn)         # restore before pipeline execution / I/O / serialisation
 ```
 
-### B3. `the crew worker of task '...' crashed N consecutive time(s)` → OOM
+#### B3. `the crew worker of task '...' crashed N consecutive time(s)` → OOM
 
 A "worker crash" is the SLURM job dying, not an R error (so `error = "continue"`
 does not rescue it). It's almost always **out of memory**. Diagnose with `sacct`
@@ -154,7 +154,7 @@ In this run every worker showed `MaxRSS ≈ 2.0 G` against a `2Gc` request → O
 Raising `memory_gigabytes_per_cpu` from `2` to `8` fixed it. (The kill masks the
 true peak, so give generous headroom rather than a marginal bump.)
 
-### B4. `there is no package called 'arrow'` when building the figure
+#### B4. `there is no package called 'arrow'` when building the figure
 
 The HPC lacked `arrow`. Since the pipeline already depends on `duckplyr`, read the
 summary Parquet with that instead (no extra package to install):
@@ -170,9 +170,9 @@ summary_tbl <- tibble::as_tibble(dplyr::collect(
 
 ---
 
-## Part C — Pull results back to WSL and report locally
+### Part C — Pull results back to WSL and report locally
 
-### C1. Confirm SSH works from WSL (keys live per-environment)
+#### C1. Confirm SSH works from WSL (keys live per-environment)
 
 Windows and WSL have **separate** `~/.ssh`. Probe non-interactively (fails fast
 instead of hanging on a password prompt):
@@ -183,7 +183,7 @@ ssh -o BatchMode=yes -o ConnectTimeout=12 rfisher@hpc-l001.aims.gov.au 'echo SSH
 
 If this prints `SSH_OK`, key auth works from WSL and you can run the pull here.
 
-### C2. Find the **real** remote path (home may not be `/home/<user>`)
+#### C2. Find the **real** remote path (home may not be `/home/<user>`)
 
 ```sh
 ssh rfisher@hpc-l001.aims.gov.au '
@@ -196,7 +196,7 @@ ssh rfisher@hpc-l001.aims.gov.au '
 Example: home was `/export/home/q-z/rfisher` (not `/home/rfisher`), and the full
 `results/` was **63 GB / 2375 files** — all the intermediate shards.
 
-### C3. Pull **only** what reporting needs — not the whole `results/`
+#### C3. Pull **only** what reporting needs — not the whole `results/`
 
 You need the collated `summary.parquet` (~34 MB) and `cache/` (`fits.rds` +
 `true_hc.rds`, ~11 MB). **Do not** rsync all of `results/` (63 GB of shards).
@@ -218,7 +218,7 @@ rsync -az "rfisher@hpc-l001.aims.gov.au:$REMOTE/cache/" "cache/"
 > Run scripts on `/mnt/c` with `bash script.sh` (the exec bit doesn't stick there),
 > and run the pull **from WSL**, not from an SSH session on the HPC.
 
-### C4. Install the R packages locally (one-off)
+#### C4. Install the R packages locally (one-off)
 
 The figure/scenario scripts need `ssdsims` (your own package, install from source)
 and a Parquet reader (`duckplyr`). Everything else (`ssdtools`, `dplyr`, `ggplot2`,
@@ -230,7 +230,7 @@ Rscript -e 'remotes::install_local("/mnt/c/Rworking/ssdsims", dependencies = TRU
 # Use dependencies = NA for Imports-only if you want a leaner install.
 ```
 
-### C5. Verify the layout hash matches before relying on the data
+#### C5. Verify the layout hash matches before relying on the data
 
 `make_figure.R` derives the results dir from the **local** `scenario.R`. If it has
 drifted from the HPC copy, the hash won't match and it won't find the pulled data.
@@ -241,7 +241,7 @@ Rscript -e 'source("scenario.R"); cat(ssdsims::scenario_results_dir(scenario), "
 # Must end in the same layout=<hash> you pulled (e.g. layout=5b3e1f4f4da3).
 ```
 
-### C6. Build the figure / tables
+#### C6. Build the figure / tables
 
 ```sh
 Rscript make_figure.R      # writes ../output/<figure>.png
@@ -269,7 +269,7 @@ source("scenario.R")   # also defines true_hc (from cache/)
 
 ---
 
-## Quick checklist for next time
+### Quick checklist for next time
 
 1. [ ] Code on the HPC login node; `sbatch` resolves.
 2. [ ] `export TMPDIR=$HOME/scratch/rtmp` (roomy fs) **before** `Rscript`.
