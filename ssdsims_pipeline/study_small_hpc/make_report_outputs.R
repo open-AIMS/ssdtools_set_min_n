@@ -12,6 +12,17 @@
 #   2. study_small_summary_table.csv - median relative bias, its IQR,
 #      median relative CI width, and coverage, by proportion x N.
 #
+#   3. source_weights_summary.csv - mean re-fitted AICc weight per
+#      (source_dist, nrow, distribution), averaged over datasets and sims. Feeds
+#      the two per-source distribution-weight figures (2024 addendum Fig 4).
+#
+#   4. bias_by_source_summary.csv - median relative bias (+Q25/Q75), median
+#      relative CI width, and coverage per (source_dist, nrow, proportion). Feeds
+#      the per-source bias/coverage figures (2024 addendum Fig 3).
+#
+# For (3) and (4) source_dist is taken from cache/true_hc.rds (via scenario.R) -
+# the distribution ssd_gen() actually sampled from - NOT from dataset_aicc_weights.csv.
+#
 # Why a separate script from make_figure.R: the three panels need DIFFERENT
 # y-transforms, and facet_grid cannot carry a per-row scale. So each panel is a
 # standalone ggplot combined with patchwork. make_figure.R (the exact Figure 2
@@ -152,3 +163,47 @@ print(
       width_median = round(width_median, 2)),
   n = Inf
 )
+
+# ---- per-source summaries (2024 addendum Figs 3 & 4) ------------------------
+#
+# source_dist comes from cache/true_hc.rds (loaded by scenario.R as `true_hc`) -
+# the distribution ssd_gen() sampled from - so these summaries do not depend on
+# dataset_aicc_weights.csv. n_datasets is carried through so thin panels (the
+# lnorm_lnorm source has a single dataset, anzg_iron_marine) are visible.
+source_map <- unique(true_hc[, c("dataset", "source_dist")])
+
+# (3) mean re-fitted AICc weight by (source_dist, nrow, distribution). Reads the
+# committed per-dataset means (already averaged over the 500 sims) and averages
+# those over the datasets sharing a source distribution.
+source_weights_summary <- read.csv("fit_weights_summary.csv") |>
+  left_join(source_map, by = "dataset") |>
+  group_by(source_dist, nrow, distribution) |>
+  summarise(
+    mean_weight = mean(mean_weight),
+    n_datasets = n_distinct(dataset),
+    .groups = "drop"
+  ) |>
+  arrange(source_dist, nrow, distribution)
+
+write.csv(source_weights_summary, "source_weights_summary.csv", row.names = FALSE)
+cat(sprintf("Wrote source_weights_summary.csv (%d rows)\n", nrow(source_weights_summary)))
+
+# (4) bias / CI width / coverage by (source_dist, nrow, proportion), from the
+# per-sim `results` built above (recovers dataset via hc_id -> hc_tasks).
+bias_by_source_summary <- results |>
+  left_join(source_map, by = "dataset") |>
+  group_by(source_dist, nrow, proportion) |>
+  summarise(
+    n_sims = n(),
+    n_datasets = n_distinct(dataset),
+    coverage = mean(covered),
+    bias_median = median(bias),
+    bias_q25 = quantile(bias, 0.25),
+    bias_q75 = quantile(bias, 0.75),
+    width_median = median(width),
+    .groups = "drop"
+  ) |>
+  arrange(source_dist, nrow, proportion)
+
+write.csv(bias_by_source_summary, "bias_by_source_summary.csv", row.names = FALSE)
+cat(sprintf("Wrote bias_by_source_summary.csv (%d rows)\n", nrow(bias_by_source_summary)))
