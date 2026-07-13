@@ -33,7 +33,41 @@ runbook + include-safety for both runbooks (5); a Stage-3 TODO placeholder (6).
 
 **User:** [Stage 1 instructions — see scope above.]
 
-**Claude:** Executed Tasks 0–6, one commit per task. Details appended below as
-each task completes.
+**Claude:** Executed Tasks 0–6, one commit per task. Outcomes:
+
+- **Task 0** — created this session log (commit 08bf4bc).
+- **Task 1** (88a0ea9) — added `make_dataset_weights.R` rebuilding
+  `dataset_aicc_weights.csv` from `cache/fits.rds` at full precision, with an
+  explicit deterministic tie-break that reproduces `cache/true_hc.rds` and
+  asserts 41/41 agreement. `ccme_boron`'s source flipped `gamma`→`weibull`
+  (both round to 0.357; true diff ~9e-4, weibull 0.357472 > gamma 0.356574).
+  Corrected source counts (of 41): gamma 4, lgumbel 15, llogis 5, lnorm 10,
+  lnorm_lnorm 1, weibull 6.
+- **Task 2** (4316062) — extended `make_report_outputs.R` to write
+  `source_weights_summary.csv` (252 rows = 6 source × 7 N × 6 dist; mean
+  re-fitted AICc weight + `n_datasets`) and `bias_by_source_summary.csv`
+  (168 rows = 6 source × 7 N × 4 proportion; median bias/Q25/Q75, median CI
+  width, coverage). `source_dist` taken from `cache/true_hc.rds`, not the CSV.
+  No NAs; per-source `n_datasets` matches the Task 1 counts.
+- **Task 3** (8a91cb1) — created `references.bib` (addendum, Warne 2018/2025,
+  distinct Fox 2022 methodologies `fm9b-7n28` + Fox 2024 final `xtvt-yc51`
+  renamed `fox_final_2024`, ssdtools/ssddata/ssdsims, Yanagihara et al. 2024,
+  ANZG 2020, BC MoE 2019, the ssdtools AICc issue, targets, crew.cluster),
+  copied `springer-basic-author-date.csl`, and wired `bibliography:`/`csl:`
+  into the qmd YAML. No prose citations inserted. Fox 2022/2024 titles and the
+  Yanagihara entry were verified against online sources, not fabricated.
+- **Task 4** (e919d61) — corrected `min_sample_size.Rmd:39`: 6 is the current
+  BC and Canadian minimum, 7 only the recommended new minimum. Confirmed Warne
+  et al. 2025 sets the current N=6 minimum; the PDF was too large to paginate
+  in-session so it is cited without a page reference (recorded as a bib comment).
+- **Task 5** (21e31e2) — wrote `small_study/WSL_WORKFLOW_RUNBOOK.md` to the
+  HPC runbook's standard; flagged `run.R`'s stale `nsim=50` comment (verified
+  default is 30). Made both runbooks Quarto-include-safe: no YAML, top heading
+  demoted to H2 (HPC runbook: 21 heading lines only, nothing else changed).
+- **Task 6** (ab5b233) — added a one-line HTML TODO comment near the top of the
+  qmd recording the Stage-3 scope/author-role note (note itself not written).
+
+**Verification:** `quarto render study_small_report.qmd` succeeds (13 s; picks up
+the bibliography + CSL). Working tree clean apart from git-ignored build outputs.
 
 ---
