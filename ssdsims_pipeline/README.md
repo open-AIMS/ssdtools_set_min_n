@@ -26,6 +26,8 @@ ssdsims_pipeline/
 |   |-- check_prereqs.R            run first: packages, scenario, cost estimate
 |   |-- run.R                      tar_make() driver
 |   `-- make_figure.R              post-process summary.parquet -> the figure
+|-- study_small_nomix/           study_small_hpc companion: same 41-dataset design
+|                                with the lnorm_lnorm mixture removed, run locally
 |-- study_large/                 Figures 3 & 4 (all_sims_bias.png,
 |   |                            weights_collated.png): 20 ssddata + EnviroTox
 |   |                            datasets, ci = FALSE
