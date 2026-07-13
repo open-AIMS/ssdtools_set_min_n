@@ -8,6 +8,8 @@ format:
     fig-align: center
     df-print: kable
     embed-resources: true
+bibliography: references.bib
+csl: springer-basic-author-date.csl
 execute:
   echo: false
   warning: false

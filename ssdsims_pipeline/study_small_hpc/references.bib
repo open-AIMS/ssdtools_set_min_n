@@ -1,0 +1,182 @@
+% references.bib - bibliography for study_small_report.qmd.
+% Entries reused (same keys) from /mnt/c/Rworking/ssdaveragerr/paper/references.bib
+% where they already existed: warne_revised_2018, thorley_ssdtools_2018,
+% thorley_ssdtools_2025, ssddata. The ssdaveragerr key `fox_methodologies_2024`
+% is actually the 2024 FINAL report, so it is renamed here to fox_final_2024 and
+% a distinct fox_methodologies_2022 (the methodologies report) is added.
+
+% ---- BCANZ / SSD methodology reports ---------------------------------------
+
+@techreport{fisher_addendum_2024,
+  author      = {Fisher, R. and Fox, D. R. and Thorley, J. L.},
+  title       = {Addendum: Final report of the joint investigation into SSD
+                 modelling and ssdtools implementation for the derivation of
+                 toxicant guideline values in Australia and New Zealand},
+  institution = {Environmetrics Australia and Australian Institute of Marine Science},
+  year        = {2024},
+  pages       = {13},
+  note        = {Prepared for the Department of Climate Change, Energy, the
+                 Environment and Water (DCCEEW). 13 pp.}
+}
+
+@techreport{fox_methodologies_2022,
+  author      = {Fox, D. R. and Fisher, R. and Thorley, J. L. and Schwarz, C.},
+  title       = {Joint investigation into statistical methodologies underpinning
+                 the derivation of toxicant guideline values in Australia and
+                 New Zealand},
+  institution = {Environmetrics Australia and Australian Institute of Marine Science},
+  year        = {2022},
+  doi         = {10.25845/fm9b-7n28}
+}
+
+@techreport{fox_final_2024,
+  author      = {Fox, D. R. and Fisher, R. and Thorley, J. L.},
+  title       = {Final report of the joint investigation into SSD modelling and
+                 ssdtools implementation for the derivation of toxicant guideline
+                 values in Australia and New Zealand},
+  institution = {Environmetrics Australia and Australian Institute of Marine Science},
+  doi         = {10.25845/xtvt-yc51},
+  month       = apr,
+  year        = {2024},
+  note        = {Report prepared for the Department of Climate Change, Energy,
+                 the Environment and Water}
+}
+
+@article{warne_revised_2018,
+  title   = {Revised method for deriving Australian and New Zealand water quality
+             guideline values for toxicants},
+  author  = {Warne, Michael St. J. and Batley, Graeme E. and Van Dam, Rick A. and
+             Chapman, John C. and Fox, David R. and Hickey, Christopher W. and
+             Stauber, Jenny L.},
+  year    = {2018},
+  doi     = {10.13140/RG.2.2.36577.35686},
+  url     = {http://rgdoi.net/10.13140/RG.2.2.36577.35686},
+  note    = {Update of the 2015 version. Prepared for the revision of the
+             Australian and New Zealand Guidelines for Fresh and Marine Water
+             Quality. Australian and New Zealand Governments and Australian state
+             and territory governments, Canberra}
+}
+
+@techreport{warne_method_2025,
+  author      = {Warne, M. St. J. and Batley, G. E. and van Dam, R. A. and
+                 Chapman, J. C. and Fox, D. R. and Hickey, C. W. and
+                 Stauber, J. L. and Fisher, R.},
+  title       = {Method for Deriving Australian and New Zealand Water Quality
+                 Guideline Values for Protecting Aquatic Ecosystems from
+                 Toxicants -- Update of 2018 Version},
+  institution = {Australian and New Zealand Governments and Australian state
+                 and territory governments},
+  address     = {Canberra, ACT, Australia},
+  year        = {2025},
+  note        = {Prepared for the Australian and New Zealand Guidelines for
+                 Fresh and Marine Water Quality. CC BY 4.0},
+  url         = {https://www.waterquality.gov.au/sites/default/files/documents/warne-etal-2025.pdf}
+}
+
+% ---- guidelines / jurisdictional minima ------------------------------------
+
+@misc{anzg_2020,
+  author       = {{ANZG}},
+  title        = {Australian and New Zealand Guidelines for Fresh and Marine
+                  Water Quality},
+  year         = {2020},
+  howpublished = {Australian and New Zealand Governments and Australian state and
+                  territory governments, Canberra},
+  url          = {https://www.waterquality.gov.au/anz-guidelines}
+}
+
+@techreport{bc_moe_2019,
+  author      = {{British Columbia Ministry of Environment and Climate Change Strategy}},
+  title       = {Guidance for the derivation and application of water quality
+                 guidelines for the protection of aquatic life in British Columbia},
+  institution = {Water Protection and Sustainability Branch, British Columbia
+                 Ministry of Environment and Climate Change Strategy},
+  address     = {Victoria, BC},
+  year        = {2019}
+}
+
+% ---- primary literature ----------------------------------------------------
+
+@article{yanagihara_which_2024,
+  title   = {Which distribution to choose for deriving a species sensitivity
+             distribution? Implications from analysis of acute and chronic
+             ecotoxicity data},
+  author  = {Yanagihara, Miina and Hiki, Kyoshiro and Iwasaki, Yuichi},
+  journal = {Ecotoxicology and Environmental Safety},
+  volume  = {278},
+  pages   = {116379},
+  year    = {2024},
+  doi     = {10.1016/j.ecoenv.2024.116379}
+}
+
+% ---- software --------------------------------------------------------------
+
+@article{thorley_ssdtools_2018,
+  title   = {ssdtools: An {R} package to fit Species Sensitivity Distributions},
+  author  = {Thorley, Joe and Schwarz, Carl},
+  journal = {Journal of Open Source Software},
+  volume  = {3},
+  number  = {31},
+  pages   = {1082},
+  year    = {2018},
+  doi     = {10.21105/joss.01082}
+}
+
+@article{thorley_ssdtools_2025,
+  title   = {ssdtools v2: An {R} package to fit Species Sensitivity Distributions},
+  author  = {Thorley, Joe and Fisher, Rebecca and Fox, David and Schwarz, Carl},
+  journal = {Journal of Open Source Software},
+  volume  = {10},
+  number  = {105},
+  pages   = {7492},
+  year    = {2025},
+  doi     = {10.21105/joss.07492}
+}
+
+@Manual{ssddata,
+  title  = {ssddata: Species Sensitivity Distribution Data},
+  author = {Fisher, R. and Thorley, J. L.},
+  year   = {2021},
+  note   = {R package version 1.0.0},
+  url    = {https://CRAN.R-project.org/package=ssddata},
+  doi    = {10.32614/cran.package.ssddata}
+}
+
+@Manual{ssdsims,
+  title  = {ssdsims: Simulation Analyses for Species Sensitivity Distributions},
+  author = {Thorley, Joe and Fisher, Rebecca},
+  year   = {2026},
+  note   = {R package version 0.0.0.9015},
+  url    = {https://poissonconsulting.github.io/ssdsims/}
+}
+
+@misc{ssdtools_aicc_issue,
+  author       = {Fisher, R.},
+  title        = {AICc small-sample correction is degenerate for distributions
+                  with npars $\geq$ nobs $-$ 1 (e.g. lnorm\_lnorm at small N)},
+  year         = {2026},
+  howpublished = {ssdtools software issue, GitHub},
+  url          = {https://github.com/bcgov/ssdtools/issues}
+}
+
+@article{landau_targets_2021,
+  title   = {The targets {R} package: a dynamic {Make}-like function-oriented
+             pipeline toolkit for reproducible workflows and high-performance
+             computing},
+  author  = {Landau, William Michael},
+  journal = {Journal of Open Source Software},
+  volume  = {6},
+  number  = {57},
+  pages   = {2959},
+  year    = {2021},
+  doi     = {10.21105/joss.02959}
+}
+
+@Manual{crew_cluster,
+  title  = {crew.cluster: Crew Launcher Plugins for Traditional High-Performance
+            Computing Clusters},
+  author = {Landau, William Michael},
+  year   = {2024},
+  note   = {R package},
+  url    = {https://wlandau.github.io/crew.cluster/}
+}
