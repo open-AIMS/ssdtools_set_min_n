@@ -84,8 +84,8 @@ scenario <- ssd_define_scenario(
   # ~0.2 min per (dataset, sim) hc task x 41 datasets x 30 sims ~= 246 core-min
   # -> ~30 min wall at the 8 local workers _targets.R uses (8, not more, to stay
   # within RAM). 30 sims x 41 datasets = 1230 obs/N is ample for pooled coverage.
-  # Set SMALL_STUDY_NSIM=2 for a fast pilot after any nboot/proportion/dists change.
-  nsim = as.integer(Sys.getenv("SMALL_STUDY_NSIM", unset = "30")),
+  # Set STUDY_SMALL_NOMIX_NSIM=2 for a fast pilot after any nboot/proportion/dists change.
+  nsim = as.integer(Sys.getenv("STUDY_SMALL_NOMIX_NSIM", unset = "30")),
   seed = 42L,
   nrow = c(5L, 6L, 7L, 8L),
   dists = ssd_distset(BCANZ_no_mix = dists_nomix),

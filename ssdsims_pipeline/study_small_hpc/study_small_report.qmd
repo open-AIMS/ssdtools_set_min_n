@@ -291,16 +291,16 @@ is the *estimator* running out of data, and how much is the *criterion* rewardin
 a five-parameter mixture it should have excluded at that N? This cannot be
 recovered from the run above — coverage and CI width need fresh bootstrap
 intervals computed from the reduced candidate set — so it needs its own run. The
-companion [`small_study`](../small_study) pipeline repeats the design on all 41
+companion [`study_small_nomix`](../study_small_nomix) pipeline repeats the design on all 41
 datasets with the **five 2-parameter unimodal distributions only** (gamma,
 lgumbel, llogis, lnorm, weibull — for which AICc is well defined at $N \ge 4$),
 at `nsim = 30`, $N \in \{5, 6, 7, 8\}$, `nboot = 200`. It runs locally in
-~30 min (`../small_study/README.md`); its committed summary feeds the table and
+~30 min (`../study_small_nomix/README.md`); its committed summary feeds the table and
 figure below.
 
 ```{r nomix}
 #| tbl-cap: "Coverage of the true HC~x~ by sample size with the lnorm_lnorm mixture removed (five 2-parameter distributions only; 41 datasets × 30 sims = 1,230 per cell)."
-nomix <- read.csv("../small_study/small_study_summary_table.csv")
+nomix <- read.csv("../study_small_nomix/study_small_nomix_summary_table.csv")
 
 cov_wide <- nomix |>
   mutate(HC = paste0("HC", 100 * proportion)) |>
@@ -324,7 +324,7 @@ w6 <- signif(nomix$median_width[nomix$nrow == 6 & nomix$proportion == 0.01], 3)
 
 ```{r nomix-fig}
 #| fig-cap: "Per-dataset coverage by N with the lnorm_lnorm mixture removed. Boxes overlap heavily across N = 5–8 with no step at N = 5→6; the dashed line is the nominal 0.95."
-include_graphics("../small_study/small_study_coverage.png")
+include_graphics("../study_small_nomix/study_small_nomix_coverage.png")
 ```
 
 **The cliff is largely an artefact of the mixture.** With the degenerate

@@ -1,9 +1,9 @@
 #!/usr/bin/env Rscript
 
-# Driver for the mixture-excluded small_study. Runs locally via the crew local
-# controller in _targets.R. Usage (from ssdsims_pipeline/small_study/):
-#   Rscript run.R                 # nsim = 50 (default)
-#   SMALL_STUDY_NSIM=2 Rscript run.R   # fast pilot
+# Driver for the mixture-excluded study_small_nomix. Runs locally via the crew local
+# controller in _targets.R. Usage (from ssdsims_pipeline/study_small_nomix/):
+#   Rscript run.R                 # nsim = 30 (default)
+#   STUDY_SMALL_NOMIX_NSIM=2 Rscript run.R   # fast pilot
 
 library(targets)
 

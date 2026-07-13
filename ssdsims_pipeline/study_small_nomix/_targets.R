@@ -1,4 +1,4 @@
-# _targets.R - local crew pipeline for the mixture-excluded small_study.
+# _targets.R - local crew pipeline for the mixture-excluded study_small_nomix.
 # Same machinery as ../study_small, just the reduced-candidate-set scenario.
 # Run via: Rscript run.R
 
@@ -11,7 +11,7 @@ source("scenario.R")
 options(old_warn)
 
 controller <- crew::crew_controller_local(
-  name = "small-study",
+  name = "study-small-nomix",
   # 8, not one-per-core: 18 local workers each loading ssdtools/duckdb and
   # running weighted-sample bootstraps exhausted RAM on the 31 GB dev box and
   # crashed workers (crew reports it as repeated crashes on whichever task was

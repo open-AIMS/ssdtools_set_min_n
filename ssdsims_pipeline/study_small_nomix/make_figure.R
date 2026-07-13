@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-# make_figure.R - summarise the mixture-excluded small_study: coverage, median
+# make_figure.R - summarise the mixture-excluded study_small_nomix: coverage, median
 # relative bias, and median relative CI width by HC proportion and N, with the
 # N=5-vs-N=6 comparison front and centre. Writes a coverage figure and a summary
 # CSV, and prints the by-N table. Run after run.R.
@@ -44,7 +44,7 @@ tab <- res |>
 
 # Write the shareable summary CSV/figure into this folder (tracked) rather than
 # ../output (git-ignored scratch), matching study_small_hpc's committed-CSV layout.
-write.csv(tab, "small_study_summary_table.csv", row.names = FALSE)
+write.csv(tab, "study_small_nomix_summary_table.csv", row.names = FALSE)
 
 cat("=== coverage / median bias / median width by N (lnorm_lnorm mixture removed) ===\n")
 print(tab |> mutate(across(c(coverage, median_bias, median_width), \(x) round(x, 3))), n = Inf)
@@ -62,8 +62,8 @@ p <- ggplot(cov_df, aes(N, coverage)) +
   facet_wrap(~prop, nrow = 1) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(x = "N", y = "Coverage (fraction covering true)",
-    title = "small_study: coverage with the lnorm_lnorm mixture removed") +
+    title = "study_small_nomix: coverage with the lnorm_lnorm mixture removed") +
   theme_bw(base_size = 10)
-ggsave("small_study_coverage.png", p, width = 9, height = 3.5, dpi = 150)
+ggsave("study_small_nomix_coverage.png", p, width = 9, height = 3.5, dpi = 150)
 
-cat("\nWrote small_study_coverage.png and small_study_summary_table.csv\n")
+cat("\nWrote study_small_nomix_coverage.png and study_small_nomix_summary_table.csv\n")

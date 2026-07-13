@@ -1,6 +1,6 @@
 ## WSL local `targets` + `crew` Pipeline Runbook
 
-A step-by-step guide for running the **mixture-excluded** `small_study` simulation
+A step-by-step guide for running the **mixture-excluded** `study_small_nomix` simulation
 locally on the WSL workstation with a `crew` **local** controller, then building
 its figure and summary table in place.
 
@@ -8,7 +8,7 @@ It is the local companion to the HPC runbook (`../study_small_hpc/HPC_WORKFLOW_R
 Where that run puts the full six-distribution BCANZ study on a SLURM cluster, this
 one runs a smaller, tractable variant on a single machine — no scheduler, no
 cluster, no result transfer. The concrete commands below are the actual
-`small_study` run (July 2026).
+`study_small_nomix` run (July 2026).
 
 ### 0. Architecture in one paragraph
 
@@ -20,7 +20,7 @@ local Parquet under a seed-/layout-keyed dir
 driver, the workers, and the outputs all live on one box, so there is nothing to
 submit and nothing to pull back.
 
-Key files in the workflow directory (`ssdsims_pipeline/small_study/`):
+Key files in the workflow directory (`ssdsims_pipeline/study_small_nomix/`):
 
 | File | Role |
 |------|------|
@@ -66,27 +66,22 @@ bootstrap CIs. Fits and "true" HC values are cached to `cache/fits.rds` and
 
 Scenario parameters (verify against `scenario.R` before relying on them):
 
-| Parameter | `small_study` value | Set where |
+| Parameter | `study_small_nomix` value | Set where |
 |-----------|---------------------|-----------|
 | `dists` | 5 unimodal (no `lnorm_lnorm`) | `ssd_distset(BCANZ_no_mix = dists_nomix)` |
-| `nsim` | `30` (override with `SMALL_STUDY_NSIM`) | `Sys.getenv("SMALL_STUDY_NSIM", unset = "30")` |
+| `nsim` | `30` (override with `STUDY_SMALL_NOMIX_NSIM`) | `Sys.getenv("STUDY_SMALL_NOMIX_NSIM", unset = "30")` |
 | `nrow` | `5, 6, 7, 8` | focused on the N = 5-vs-6 question |
 | `proportion` | `0.01, 0.05, 0.1, 0.2` | HC1, HC5, HC10, HC20 |
 | `nboot` | `200` | weighted-sample bootstrap |
 | `est_method` / `ci_method` | `multi` / `weighted_samples` | recommended methods |
 | `seed` | `42` | reproducibility |
 
-> The header comment in `run.R` says "nsim = 50 (default)"; the **actual** default
-> in `scenario.R` is `30` (`SMALL_STUDY_NSIM` unset → `"30"`), which is what the
-> committed outputs were built with (1,230 = 30 sims × 41 datasets per N cell).
-> Treat `scenario.R` as authoritative.
-
 #### A3. How this differs from the HPC configuration
 
 Same simulation machinery (`ssd_scenario_targets()`), different controller **and**
 a smaller, mixture-free scenario:
 
-| Aspect | HPC (`study_small_hpc`) | WSL (`small_study`) |
+| Aspect | HPC (`study_small_hpc`) | WSL (`study_small_nomix`) |
 |--------|-------------------------|---------------------|
 | Controller | `crew.cluster::crew_controller_slurm()` — each worker a `sbatch` job | `crew::crew_controller_local()` — local processes |
 | Where the driver runs | HPC login/submit node | this WSL machine |
@@ -106,10 +101,10 @@ shard does not abort the whole run.
 #### A4. Invocation
 
 ```sh
-cd ssdsims_pipeline/small_study
-SMALL_STUDY_NSIM=2 Rscript run.R   # fast pilot: check it builds end to end
+cd ssdsims_pipeline/study_small_nomix
+STUDY_SMALL_NOMIX_NSIM=2 Rscript run.R   # fast pilot: check it builds end to end
 Rscript run.R                      # full run (nsim = 30)
-Rscript make_figure.R              # writes small_study_coverage.png + summary CSV
+Rscript make_figure.R              # writes study_small_nomix_coverage.png + summary CSV
 ```
 
 `run.R` scopes `options(warn = 2)` to sourcing `scenario.R` only (so a benign
@@ -125,7 +120,7 @@ changed.
   30 sims ≈ 246 core-min ÷ 8 workers ≈ 30 min).
 - **Concurrency:** `workers = 8L`, `seconds_idle = 30`. RAM-bound, not core-bound,
   on the 31 GB box — hence 8 rather than one-per-core.
-- **Pilot:** `SMALL_STUDY_NSIM=2` completes in a couple of minutes and is the right
+- **Pilot:** `STUDY_SMALL_NOMIX_NSIM=2` completes in a couple of minutes and is the right
   smoke test after any change to `nboot`, `proportion`, or the distribution set.
 
 ### Part B — Outputs and how to inspect results
@@ -134,8 +129,8 @@ changed.
 
 | Output | Tracked? | What it is |
 |--------|----------|------------|
-| `small_study_summary_table.csv` | **committed** | coverage, median rel. bias, median rel. CI width, `n` per (proportion, N) |
-| `small_study_coverage.png` | **committed** | per-dataset coverage boxplots by N, faceted by HC proportion |
+| `study_small_nomix_summary_table.csv` | **committed** | coverage, median rel. bias, median rel. CI width, `n` per (proportion, N) |
+| `study_small_nomix_coverage.png` | **committed** | per-dataset coverage boxplots by N, faceted by HC proportion |
 | `cache/fits.rds`, `cache/true_hc.rds` | git-ignored | cached real-data fits and "true" HC values |
 | `results/seed=42/layout=<hash>/summary.parquet` | git-ignored | the collated per-sim HC results |
 | `_targets/` | git-ignored | the `targets` metadata/object store |
@@ -149,7 +144,7 @@ The two committed files are the shareable outputs; `cache/`, `results/`, and
 console and writes the CSV + PNG. To read the summary CSV directly:
 
 ```r
-read.csv("small_study_summary_table.csv")
+read.csv("study_small_nomix_summary_table.csv")
 # 16 rows = 4 proportions × 4 N; compare the N = 5 and N = 6 coverage rows to the
 # full-mixture study_small(_hpc) results — the point of this run.
 ```
@@ -174,7 +169,7 @@ source("scenario.R")   # also defines true_hc (from cache/)
 ### Quick checklist for next time
 
 1. [ ] `ssdsims` + `duckplyr` installed in the WSL R; `which R` is the WSL one.
-2. [ ] `SMALL_STUDY_NSIM=2 Rscript run.R` pilot builds end to end.
+2. [ ] `STUDY_SMALL_NOMIX_NSIM=2 Rscript run.R` pilot builds end to end.
 3. [ ] `Rscript run.R` (full `nsim = 30`, ~30 min on 8 workers).
-4. [ ] `Rscript make_figure.R` → `small_study_coverage.png` + `small_study_summary_table.csv`.
+4. [ ] `Rscript make_figure.R` → `study_small_nomix_coverage.png` + `study_small_nomix_summary_table.csv`.
 5. [ ] Compare N = 5 vs N = 6 coverage against the full-mixture `study_small(_hpc)` result.

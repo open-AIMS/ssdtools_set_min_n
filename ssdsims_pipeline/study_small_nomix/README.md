@@ -1,4 +1,4 @@
-# small_study
+# study_small_nomix
 
 A small, local, **tractable** variant of [`study_small`](../study_small) that
 **removes the 5-parameter `lnorm_lnorm` mixture** from the candidate distribution
@@ -24,19 +24,19 @@ with the reduced candidate set), so it needs its own small run.
   — the five 2-parameter unimodal distributions (gamma, lgumbel, llogis, lnorm,
   weibull), for which AICc is well defined at N ≥ 4.
 - Sized down for local use: `nsim = 30`, `nrow = c(5, 6, 7, 8)`, `nboot = 200`.
-  `nsim` is overridable with the `SMALL_STUDY_NSIM` env var for piloting.
+  `nsim` is overridable with the `STUDY_SMALL_NOMIX_NSIM` env var for piloting.
 
 ## Run
 
 ```sh
-cd ssdsims_pipeline/small_study
-SMALL_STUDY_NSIM=2 Rscript run.R   # ~fast pilot to check it builds
+cd ssdsims_pipeline/study_small_nomix
+STUDY_SMALL_NOMIX_NSIM=2 Rscript run.R   # ~fast pilot to check it builds
 Rscript run.R                      # full run (~30 min on 8 local workers)
-Rscript make_figure.R              # small_study_coverage.png + summary CSV
+Rscript make_figure.R              # study_small_nomix_coverage.png + summary CSV
 ```
 
 `make_figure.R` prints coverage / median bias / median CI width by N and writes
-`small_study_summary_table.csv` and `small_study_coverage.png` into this folder
+`study_small_nomix_summary_table.csv` and `study_small_nomix_coverage.png` into this folder
 (both committed) — compare the N = 5 and N = 6 rows to the full-mixture
 `study_small` results.
 
