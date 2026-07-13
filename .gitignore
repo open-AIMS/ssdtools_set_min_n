@@ -56,5 +56,8 @@ po/*~
 rsconnect/
 
 *.html
+# Rendered Quarto docx report (a build artifact, like the ignored *.html above).
+# reference-doc.docx is a committed render SOURCE and is deliberately not matched.
+**/study_small_report.docx
 # Regenerable raw fit-weight extract (aggregate to fit_weights_summary.csv)
 **/fit_weights_observed.csv

@@ -109,7 +109,7 @@ Inside `crew_controller_slurm()` / `crew_options_slurm()`:
 
 ---
 
-### Part B — Diagnosing the failures we actually hit
+### Part B — Diagnosing the failures encountered in this run
 
 #### B1. `gzfile ... No space left on device` → temp space
 

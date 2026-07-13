@@ -20,6 +20,14 @@
 #      relative CI width, and coverage per (source_dist, nrow, proportion). Feeds
 #      the per-source bias/coverage figures (2024 addendum Fig 3).
 #
+#   5. fit_weights_quantiles.csv - q10/q25/q50/q75/q90 of the re-fitted AICc
+#      weight ACROSS the 500 simulations, per (dataset, nrow, distribution). This
+#      is the ONLY committed source of between-simulation spread for the weight
+#      figures: source_weights_summary.csv (3) and the committed
+#      fit_weights_summary.csv both average that spread away. It is derived from
+#      the git-ignored per-sim fit_weights_observed.csv and committed so the report
+#      can render the spread from a clean clone (Stage 1 committed-derived pattern).
+#
 # For (3) and (4) source_dist is taken from cache/true_hc.rds (via scenario.R) -
 # the distribution ssd_gen() actually sampled from - NOT from dataset_aicc_weights.csv.
 #
@@ -187,6 +195,41 @@ source_weights_summary <- read.csv("fit_weights_summary.csv") |>
 
 write.csv(source_weights_summary, "source_weights_summary.csv", row.names = FALSE)
 cat(sprintf("Wrote source_weights_summary.csv (%d rows)\n", nrow(source_weights_summary)))
+
+# (5) simulation-level quantiles of the re-fitted AICc weight per
+# (dataset, nrow, distribution). fit_weights_observed.csv is the raw per-sim
+# weight (one row per dataset x sim x nrow, one column per distribution) and is
+# git-ignored; here we collapse only the 500 sims WITHIN each dataset into
+# quantiles, keeping the dataset dimension so the figures can show both
+# between-dataset points and the between-simulation range. Skipped with a warning
+# if the observed file is absent (e.g. a clean clone) - the committed CSV still
+# lets the report render.
+obs_path <- "fit_weights_observed.csv"
+if (file.exists(obs_path)) {
+  dists_obs <- c("gamma", "lgumbel", "llogis", "lnorm", "lnorm_lnorm", "weibull")
+  probs <- c(q10 = 0.10, q25 = 0.25, q50 = 0.50, q75 = 0.75, q90 = 0.90)
+
+  fit_weights_quantiles <- read.csv(obs_path) |>
+    tidyr::pivot_longer(all_of(dists_obs),
+      names_to = "distribution", values_to = "weight") |>
+    group_by(dataset, nrow, distribution) |>
+    summarise(
+      n_sims = n(),
+      q10 = quantile(weight, probs[["q10"]]),
+      q25 = quantile(weight, probs[["q25"]]),
+      q50 = quantile(weight, probs[["q50"]]),
+      q75 = quantile(weight, probs[["q75"]]),
+      q90 = quantile(weight, probs[["q90"]]),
+      .groups = "drop"
+    ) |>
+    arrange(dataset, nrow, distribution)
+
+  write.csv(fit_weights_quantiles, "fit_weights_quantiles.csv", row.names = FALSE)
+  cat(sprintf("Wrote fit_weights_quantiles.csv (%d rows)\n", nrow(fit_weights_quantiles)))
+} else {
+  warning("fit_weights_observed.csv not found; ",
+    "fit_weights_quantiles.csv NOT regenerated (committed copy retained).")
+}
 
 # (4) bias / CI width / coverage by (source_dist, nrow, proportion), from the
 # per-sim `results` built above (recovers dataset via hc_id -> hc_tasks).
