@@ -72,6 +72,68 @@ per-distribution one, (b) at the allowed `n = 6` the 5-parameter mixture is stil
 degenerate (`AICc = Inf`), and (c) any workflow that lowers the minimum (e.g. to
 study N = 5) re-exposes the reward.
 
+## Not a regression in the criterion — a change in the fit engine
+
+The AICc formula above, and its degeneracy, are **byte-identical across ssdtools
+1.0.6, 2.0.0 and 2.6.0**. The defect is a long-standing property of the criterion,
+not a regression introduced in any release. What changed between the 1.0.x and 2.x
+series is the *fitting engine*: the over-parameterised mixture is fitted to `n = 5`
+data far more often under 2.x, so a reward that was always latent now fires in
+almost every fit.
+
+A Monte Carlo check (1000 samples of `n = 5` drawn from a unimodal lognormal source,
+`meanlog = 0`, `sdlog = 1`) shows the fit rate — and hence the mean mixture weight —
+jumping with the engine while the criterion stays fixed (rates carry a
+Clopper-Pearson exact binomial 95% CI):
+
+| ssdtools | settings | `n = 5` mixture fitted (95% CI) | Mean `n = 5` mixture weight |
+|---|---|---|---|
+| 1.0.6 | native  | 67.4% (64.4–70.3) | 0.674 |
+| 1.0.6 | lenient | 68.0% (65.0–70.9) | 0.680 |
+| 2.0.0 | native  | 97.9% (96.8–98.7) | 0.979 |
+| 2.6.0 | native  | 97.9% (96.8–98.7) | 0.979 |
+
+The mean weight tracks the fit rate directly because a fitted `n = 5` mixture almost
+always wins the `-60` AICc reward: when it fits it takes `wt ≈ 1`, when it fails to
+fit it takes `wt = 0`, so the average weight is essentially the fraction of samples
+in which it was fitted at all. The `1.0.6 lenient` row is a control: relaxing the fit
+options (`computable = FALSE`, `at_boundary_ok = TRUE`, `min_pmix = 0`) does not lift
+the 1.0.x fit rate, so the jump is the engine, not the acceptance criteria.
+
+The degeneracy itself is invariant to both version and fit arguments. Fitting the
+5-point reprex above and its natural 6- and 7-point geometric extensions
+(`c(0.1, 0.3, 1, 3, 10, 30)` and `c(0.1, 0.3, 1, 3, 10, 30, 100)`), the mixture's
+full-precision AICc weight is:
+
+| ssdtools | settings | wt (`n = 5`) | wt (`n = 6`) | wt (`n = 7`) | AICc (`n = 7`) |
+|---|---|---|---|---|---|
+| 1.0.6 | native  | 1.000 | 0 | 9.4e-15 | 116.2 |
+| 1.0.6 | lenient | 1.000 | 0 | 9.4e-15 | 116.2 |
+| 2.0.0 | native  | 1.000 | 0 | 9.4e-15 | 116.2 |
+| 2.0.0 | lenient | 1.000 | 0 | 9.3e-15 | 116.2 |
+| 2.6.0 | native  | 1.000 | 0 | 9.4e-15 | 116.2 |
+| 2.6.0 | lenient | 1.000 | 0 | 9.3e-15 | 116.2 |
+
+The weight is reconstructed from the `aicc` column as `exp(-Δ/2) / Σ exp(-Δ/2)`; the
+`ssd_gof()` weight column is rounded to three decimals and would otherwise show the
+`n = 7` weight as `0`. `AICc = +∞` at `n = 6`. Varying `computable`,
+`at_boundary_ok` and `min_pmix` — the options that plausibly govern whether the
+degenerate mixture is accepted — **does not drop the degenerate `n = 5` fit in any
+version**: the reward fires across every version and both argument profiles, so the
+behaviour cannot be worked around through fit arguments.
+
+Both tables are reproducible from
+[`aicc_degeneracy_reprex.R`](./aicc_degeneracy_reprex.R) in the repository, which
+installs `ssdtools` 1.0.6 / 2.0.0 / 2.6.0 into isolated libraries and writes
+`aicc_version_comparison.csv` (the weight table) and `aicc_fit_rate_comparison.csv`
+(the Monte Carlo table).
+
+The conclusion is that **a latent criterion defect became a dominant one because the
+optimiser improved.** A more capable engine that fits the five-parameter mixture at
+`n = 5` where the older engine would have failed is doing nothing wrong; it is the
+criterion that rewards the resulting fit. The fix therefore belongs at the criterion
+(below), not in the fit engine or its options.
+
 ## Suggested fix
 
 Guard AICc at the criterion level, per distribution: when `nobs < npars + 2`,
