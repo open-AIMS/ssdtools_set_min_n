@@ -27,6 +27,7 @@ library(knitr)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+library(patchwork)
 
 # Reads the committed artifacts written by make_report_outputs.R (rerun that to
 # refresh them from summary.parquet):
@@ -297,10 +298,10 @@ distribution generated the data. This section reads the run by source distributi
 the BCANZ distribution treated, for each dataset, as its single data-generating
 source (see [Methods]).
 
-The two weight figures below track, for data generated from each source distribution,
-how the re-fitted AICc weights change with $N$: @fig-4a the weight assigned to the
-source distribution itself, @fig-4b the weight assigned to the `lnorm_lnorm` mixture.
-Both are built from the committed `source_weights_summary.csv` (mean re-fitted AICc
+The two-panel weight figure below tracks, for data generated from each source distribution,
+how the re-fitted AICc weights change with $N$: panel A the weight assigned to the
+source distribution itself, panel B the weight assigned to the `lnorm_lnorm` mixture.
+Both panels are built from the committed `source_weights_summary.csv` (mean re-fitted AICc
 weight per source × $N$ × distribution, averaged over the 500 simulations and over the
 datasets sharing a source), and their per-dataset spread from `fit_weights_summary.csv`
 and `fit_weights_quantiles.csv`. Panel headers carry the number of contributing
@@ -392,36 +393,34 @@ mix5_n_spread <- sum(mix_q5$q10 < 0.99)
 ```
 
 ```{r}
-#| label: fig-4a
-#| fig-cap: "Re-fitted AICc weight of the source distribution versus N, one panel per source distribution. Each point is one dataset's mean weight over its 500 simulations (between-dataset spread); each grey line is that dataset's 10th–90th percentile across those simulations (between-simulation spread). From N ≥ 7 (dashed line) the weight on the source distribution rises with N, as more observations let the criterion discriminate the generating distribution from its competitors. The near-zero source weight at N = 5 and the shift at N = 6 in the unimodal panels are explained in [The AICc mixture degeneracy]."
+#| label: fig-source-weights
+#| fig-cap: "Re-fitted AICc weight versus N, faceted by source distribution. (A) weight of the source distribution itself; (B) weight of the lnorm_lnorm mixture. In both panels each point is one dataset's mean weight over its 500 simulations (between-dataset spread), and each grey line is that dataset's 10th–90th percentile across those simulations (between-simulation spread); the dashed line marks N = 7, where the five-parameter mixture's AICc first becomes valid. From N ≥ 7 the source-distribution weight (A) rises with N as more observations let the criterion discriminate the generating distribution from its competitors, while the mixture (B) earns appreciable weight only where the source data are genuinely bimodal and the sample is large enough to detect it. The near-zero source weight and ≈ 1 mixture weight at N = 5 in every panel — including the five unimodal sources, which generated no mixture data — and the shift at N = 6 are explained in [The AICc mixture degeneracy]."
 #| fig-width: 8
-#| fig-height: 5
-weight_plot("source", "Re-fitted AICc weight\nof the source distribution")
+#| fig-height: 9
+# Stacked with patchwork (the repo's convention, as in make_report_outputs.R):
+# two facet grids share an identical x scale, so the top panel drops its x-axis
+# title and only the bottom carries "N (sample size)". Panels tagged (A)/(B).
+pa <- weight_plot("source", "Re-fitted AICc weight\nof the source distribution") +
+  labs(x = NULL)
+pb <- weight_plot("lnorm_lnorm", "Re-fitted AICc weight\nof the lnorm_lnorm mixture")
+(pa / pb) +
+  plot_annotation(tag_levels = "A", tag_prefix = "(", tag_suffix = ")")
 ```
 
-At $N \ge 7$ — the dashed line, where the mixture's AICc becomes valid — @fig-4a reads
-the way model averaging should. The weight on the source distribution rises with $N$:
-at small $N$ a handful of observations cannot distinguish one candidate distribution
-from another, so the weight is spread diffusely across the candidates, and it
-concentrates on the generating distribution only as the sample grows. Recovery is
-incomplete even at $N = 26$, because model averaging over six candidates spreads
-weight and the real-data weights are themselves diffuse ([Source representation]).
-
-```{r}
-#| label: fig-4b
-#| fig-cap: "Re-fitted AICc weight of the lnorm_lnorm mixture versus N, faceted by source distribution. Each point is one dataset's mean weight over its 500 simulations; each grey line is that dataset's 10th–90th simulation percentile. From N = 7 (dashed line) the mixture earns appreciable weight only where the source data are genuinely bimodal and the sample is large enough to detect it. At N = 5 every point sits at ≈ 1 in every panel — including all five unimodal sources, which generated no mixture data — and the weight drops to exactly 0 at N = 6; this N = 5–6 behaviour is explained in [The AICc mixture degeneracy]."
-#| fig-width: 8
-#| fig-height: 5
-weight_plot("lnorm_lnorm", "Re-fitted AICc weight\nof the lnorm_lnorm mixture")
-```
-
-@fig-4b shows the complementary reading for the mixture. From $N \ge 7$, where it is
-properly penalised, a non-trivial mixture weight requires both genuine bimodality in
-the source data and a sample large enough to detect it. Only `anzg_iron_marine` — the
-sole bimodal source among the 41 ([Source representation]) — attracts appreciable
-mixture weight, and only at larger $N$; the five unimodal sources stay near zero. This
-is the expected and correct behaviour of the criterion: the mixture is a legitimate
-competitor under exactly those conditions.
+At $N \ge 7$ — the dashed line, where the mixture's AICc becomes valid — panel A of
+@fig-source-weights reads the way model averaging should. The weight on the source
+distribution rises with $N$: at small $N$ a handful of observations cannot distinguish
+one candidate distribution from another, so the weight is spread diffusely across the
+candidates, and it concentrates on the generating distribution only as the sample
+grows. Recovery is incomplete even at $N = 26$, because model averaging over six
+candidates spreads weight and the real-data weights are themselves diffuse
+([Source representation]). Panel B shows the complementary reading for the mixture:
+from $N \ge 7$, where it is properly penalised, a non-trivial mixture weight requires
+both genuine bimodality in the source data and a sample large enough to detect it.
+Only `anzg_iron_marine` — the sole bimodal source among the 41 ([Source
+representation]) — attracts appreciable mixture weight, and only at larger $N$; the
+five unimodal sources stay near zero. This is the expected and correct behaviour of
+the criterion: the mixture is a legitimate competitor under exactly those conditions.
 
 Bias also varies with the generating distribution. @fig-3 shows the median relative
 bias by source:
@@ -470,10 +469,10 @@ sources as $N$ grows.
 
 At $N = 5$ and $N = 6$ the weights in all three figures depart sharply from the
 pattern above, and identically across panels regardless of what generated the data. At
-$N = 5$ the `lnorm_lnorm` mixture takes essentially all the weight in every panel of
-@fig-4b — including the five unimodal sources, which generated no mixture data — so the
-weight on the source distribution in @fig-4a collapses to near zero and the bias in
-@fig-3 jumps to its largest positive values. At $N = 6$ the mixture takes exactly none
+$N = 5$ the `lnorm_lnorm` mixture takes essentially all the weight in panel B of
+@fig-source-weights, in every source panel — including the five unimodal sources, which
+generated no mixture data — so the weight on the source distribution in panel A
+collapses to near zero and the bias in @fig-3 jumps to its largest positive values. At $N = 6$ the mixture takes exactly none
 of the weight, again in every panel, and the source-distribution weight and bias shift
 accordingly. That this is the same in panels whose source never produced a mixture
 means it is not a property of the data: it is an artefact of the AICc criterion,
@@ -484,7 +483,7 @@ explained in the next section, [The AICc mixture degeneracy].
 The small-$N$ behaviour in the results above is driven by a degeneracy in the AICc
 model-averaging criterion, which this study surfaces across all 41 datasets and
 20,500 fits. This section sets out the mechanism, draws on the per-source figures
-(@fig-4a, @fig-4b, @fig-3) to show that the degeneracy is a property of the criterion
+(@fig-source-weights, @fig-3) to show that the degeneracy is a property of the criterion
 rather than of the data, and reports one result from the earlier grey literature that
 cannot be reconciled with this run. A comparison establishing that the degeneracy is
 invariant to `ssdtools` version and to the fit arguments is given in
@@ -539,7 +538,7 @@ The single-dataset reprex above generalises to all 41 datasets, and the per-sour
 weight figure ([Results by source distribution]) is the most direct evidence. At
 $N = 5$ the mixture receives a mean re-fitted weight of `r round(mix5, 2)` across all
 41 datasets (`r round(mix5_uni, 2)` averaged over just the five unimodal sources),
-regardless of what generated the data (@fig-4b). The spread behind that mean is what
+regardless of what generated the data (panel B of @fig-source-weights). The spread behind that mean is what
 makes the case: the median re-fitted mixture weight at $N = 5$ is exactly $1$ for
 `r if (mix5_all_med1) "every one of the 41 datasets" else "almost every dataset"`, and
 for `r 41 - mix5_n_spread` of them the entire 10th-to-90th-percentile band across the
@@ -554,7 +553,7 @@ almost every simulation and irrespective of what generated the data, is the stro
 available demonstration that the degeneracy is mechanical, a property of the criterion
 at $n = k$, rather than data-dependent evidence of bimodality. It is the like-for-like
 complement to the criterion-not-fit argument in [Findings and recommendations]. The
-five unimodal panels of @fig-4b carry this argument; the `lnorm_lnorm`-source panel is
+five unimodal panels in panel B of @fig-source-weights carry this argument; the `lnorm_lnorm`-source panel is
 a single dataset and is shown only for completeness.
 
 ### An irrecoverable result
@@ -563,7 +562,7 @@ A long-standing degeneracy in the AICc small-sample correction becomes dominant
 under the current `ssdtools` fitting engine. At $N = 5$ the engine fits the
 over-parameterised mixture in essentially every case: across the 41 real datasets
 the mean re-fitted mixture weight is `r round(mix5, 2)`, and 95.5% of the $N = 5$
-model-averaged HC estimates collapse onto it (@fig-4b; [Results: bias, CI width,
+model-averaged HC estimates collapse onto it (panel B of @fig-source-weights; [Results: bias, CI width,
 and coverage]). These two figures — the mean re-fitted mixture weight and the
 fraction of estimates that collapse onto the mixture — coincide because at $N = 5$
 the mixture's weight is effectively binary: near $0$ when the fit fails and near $1$
