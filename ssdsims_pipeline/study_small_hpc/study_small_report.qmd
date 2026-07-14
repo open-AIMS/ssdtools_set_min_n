@@ -286,72 +286,26 @@ display <- summary_table |>
 kable(display, align = "lrrrrrrr")
 ```
 
-## The AICc mixture degeneracy
+## Results by source distribution
 
-The small-$N$ behaviour in the results above is driven by a degeneracy in the AICc
-model-averaging criterion, which this study surfaces across all 41 datasets and
-20,500 fits. This section sets out the mechanism, uses the per-source figures to
-show that the degeneracy is a property of the criterion rather than of the data, and
-reports one result from the earlier grey literature that cannot be reconciled with
-this run. A comparison establishing that the degeneracy is invariant to `ssdtools`
-version and to the fit arguments is given in
-[Appendix D — AICc degeneracy: version and fitting-engine comparison].
+The aggregate metrics in [Results: bias, CI width, and coverage] average over all 41
+datasets. Beyond bias, coverage, and interval width, it is informative to examine how
+the AICc weights themselves behave as the sample size grows — whether the criterion
+recovers the distribution that generated the data, and under what conditions the
+five-parameter mixture attracts weight — and how the bias depends on which
+distribution generated the data. This section reads the run by source distribution:
+the BCANZ distribution treated, for each dataset, as its single data-generating
+source (see [Methods]).
 
-### The mechanism
-
-At small $N$ the AICc small-sample correction breaks down for the five-parameter
-mixture, and this is what the criterion is doing rather than the mixture fitting
-better. AICc adds $\frac{2k(k+1)}{n-k-1}$ to AIC, and for the five-parameter
-mixture ($k = 5$) that denominator is non-positive at small $N$. At $n = 5$ it is
-$-1$, so the correction is $2\cdot5\cdot6/(-1) = -60$ and the mixture's AICc is
-spuriously *lowered* — a reward rather than a penalty — so it wins every comparison
-and takes weight $\approx 1$. At $n = 6$ the denominator is $0$, its AICc is
-$+\infty$, and its weight is forced to exactly 0. The correction is only defined
-for $n \ge k + 2$, i.e. $N \ge 7$ for a five-parameter model, so the $N = 5$
-and $N = 6$ mixture weights are degenerate artefacts of the criterion, not evidence
-about fit.
-
-This is reproducible in a few lines against current CRAN `ssdtools`, and is
-recorded as a `ssdtools` software issue [@ssdtools_aicc_issue]:
-
-```r
-library(ssdtools)                                     # 2.6.0
-dat <- data.frame(Conc = c(0.1, 0.3, 1, 3, 10))       # n = 5
-fit <- ssd_fit_dists(dat, dists = ssd_dists_bcanz(), nrow = 5)
-glance(fit, wt = TRUE)[, c("dist", "npars", "aic", "aicc", "wt")]
-#> dist        npars   aic   aicc   wt
-#> gamma           2  23.3   29.3   ~0
-#> lgumbel         2  23.1   29.1   ~0
-#> llogis          2  23.3   29.3   ~0
-#> lnorm           2  22.9   28.9   ~0
-#> lnorm_lnorm     5  28.0  -32.0   1.00   # worst AIC, best AICc: correction = -60
-#> weibull         2  23.2   29.2   ~0
-```
-
-The mixture has the worst AIC (28.0) but the best AICc (−32.0), and so takes
-essentially all of the AICc weight. These values are fixed by the criterion alone:
-each two-parameter candidate receives a correction of $2\cdot2\cdot3/(5-2-1) = +6$
-and the mixture a correction of $2\cdot5\cdot6/(5-5-1) = -60$, a 66-point swing
-computed entirely from the integers $n$ and $k$ and set against AIC differences
-that, on five observations, are of order $0.1$. Neither the $-60$ at $n = 5$ nor the
-$+\infty$ at $n = 6$ depends on the log-likelihood, the optimiser, or the data — the
-ranking is settled before the data are consulted. This is why relaxing `computable`,
-`at_boundary_ok` or `min_pmix` changes nothing, and why the mixture weight is
-identical across every `ssdtools` version tested
-([Appendix D — AICc degeneracy: version and fitting-engine comparison]).
-
-### Per-source weights across the 41 datasets
-
-The two figures below track, for data generated from each source distribution, how
-the re-fitted AICc weights change with $N$: @fig-4a the weight assigned to the
-source distribution itself, @fig-4b the weight assigned to the `lnorm_lnorm`
-mixture. Both are built from the committed `source_weights_summary.csv` (mean
-re-fitted AICc weight per source × $N$ × distribution, averaged over the 500
-simulations and over the datasets sharing a source), and their per-dataset spread
-from `fit_weights_summary.csv` and `fit_weights_quantiles.csv`. Panel headers carry
-the number of contributing datasets so that thin panels — the `lnorm_lnorm` source,
-in particular, has only one — are visible. Together they turn the single-dataset
-reprex above into a result: the same mechanism holds across all 41 datasets.
+The two weight figures below track, for data generated from each source distribution,
+how the re-fitted AICc weights change with $N$: @fig-4a the weight assigned to the
+source distribution itself, @fig-4b the weight assigned to the `lnorm_lnorm` mixture.
+Both are built from the committed `source_weights_summary.csv` (mean re-fitted AICc
+weight per source × $N$ × distribution, averaged over the 500 simulations and over the
+datasets sharing a source), and their per-dataset spread from `fit_weights_summary.csv`
+and `fit_weights_quantiles.csv`. Panel headers carry the number of contributing
+datasets so that thin panels — the `lnorm_lnorm` source, in particular, has only one —
+are visible.
 
 ```{r per-source-setup}
 sw <- read.csv("source_weights_summary.csv")
@@ -439,59 +393,42 @@ mix5_n_spread <- sum(mix_q5$q10 < 0.99)
 
 ```{r}
 #| label: fig-4a
-#| fig-cap: "Re-fitted AICc weight of the source distribution versus N, one panel per source distribution. Each point is one dataset's mean weight over its 500 simulations (between-dataset spread); each grey line is that dataset's 10th–90th percentile across those simulations (between-simulation spread). At N = 5 the source distribution receives almost no weight in the five unimodal panels — the degenerate mixture has taken it (see @fig-4b). From N ≥ 7 (dashed line, where the mixture's AICc becomes valid) the weight on the source distribution rises with N, as more observations let the criterion discriminate the generating distribution from its competitors."
+#| fig-cap: "Re-fitted AICc weight of the source distribution versus N, one panel per source distribution. Each point is one dataset's mean weight over its 500 simulations (between-dataset spread); each grey line is that dataset's 10th–90th percentile across those simulations (between-simulation spread). From N ≥ 7 (dashed line) the weight on the source distribution rises with N, as more observations let the criterion discriminate the generating distribution from its competitors. The near-zero source weight at N = 5 and the shift at N = 6 in the unimodal panels are explained in [The AICc mixture degeneracy]."
 #| fig-width: 8
 #| fig-height: 5
 weight_plot("source", "Re-fitted AICc weight\nof the source distribution")
 ```
 
+At $N \ge 7$ — the dashed line, where the mixture's AICc becomes valid — @fig-4a reads
+the way model averaging should. The weight on the source distribution rises with $N$:
+at small $N$ a handful of observations cannot distinguish one candidate distribution
+from another, so the weight is spread diffusely across the candidates, and it
+concentrates on the generating distribution only as the sample grows. Recovery is
+incomplete even at $N = 26$, because model averaging over six candidates spreads
+weight and the real-data weights are themselves diffuse ([Source representation]).
+
 ```{r}
 #| label: fig-4b
-#| fig-cap: "Re-fitted AICc weight of the lnorm_lnorm mixture versus N, faceted by source distribution. Each point is one dataset's mean weight over its 500 simulations; each grey line is that dataset's 10th–90th simulation percentile. At N = 5 every point sits at ≈ 1 with a negligible range in every panel — including all five unimodal sources, which did not generate mixture data. The weight drops to exactly 0 at N = 6 (AICc = +∞) and only becomes meaningful from N = 7 (dashed line), where a non-trivial mixture weight requires genuine bimodality in the source data and a sample large enough to detect it."
+#| fig-cap: "Re-fitted AICc weight of the lnorm_lnorm mixture versus N, faceted by source distribution. Each point is one dataset's mean weight over its 500 simulations; each grey line is that dataset's 10th–90th simulation percentile. From N = 7 (dashed line) the mixture earns appreciable weight only where the source data are genuinely bimodal and the sample is large enough to detect it. At N = 5 every point sits at ≈ 1 in every panel — including all five unimodal sources, which generated no mixture data — and the weight drops to exactly 0 at N = 6; this N = 5–6 behaviour is explained in [The AICc mixture degeneracy]."
 #| fig-width: 8
 #| fig-height: 5
 weight_plot("lnorm_lnorm", "Re-fitted AICc weight\nof the lnorm_lnorm mixture")
 ```
 
-@fig-4b is the most direct evidence. At $N = 5$ the mixture receives a mean
-re-fitted weight of `r round(mix5, 2)` across all 41 datasets (`r round(mix5_uni, 2)`
-averaged over just the five unimodal sources), regardless of what generated the
-data. The spread behind that mean is what makes the case: the median re-fitted
-mixture weight at $N = 5$ is exactly $1$ for `r if (mix5_all_med1) "every one of the
-41 datasets" else "almost every dataset"`, and for `r 41 - mix5_n_spread` of them the
-entire 10th-to-90th-percentile band across the 500 simulations sits at $\ge 0.99$ —
-both the between-dataset and the between-simulation spread are negligible. The single
-exception is `anzg_iron_marine` (the lone `lnorm_lnorm` source), whose mixture
-genuinely competes; its panel is the only one showing a visible range at $N = 5$. The
-mean is pulled below $1$ (to `r round(mix5, 2)`) only by a thin tail of simulations in
-which the mixture fit failed numerically and took weight $0$ — not by any real spread
-in the weight the criterion assigns. A weight of $\approx 1$ with this little
-variation, across every dataset and almost every simulation and irrespective of what
-generated the data, is the strongest available demonstration that the degeneracy is
-mechanical, a property of the criterion at $n = k$, rather than data-dependent
-evidence of bimodality. It is the like-for-like complement to the criterion-not-fit
-argument in [Findings and recommendations]. The five unimodal panels carry this
-argument; the `lnorm_lnorm`-source panel is a single dataset and is shown only for
-completeness.
+@fig-4b shows the complementary reading for the mixture. From $N \ge 7$, where it is
+properly penalised, a non-trivial mixture weight requires both genuine bimodality in
+the source data and a sample large enough to detect it. Only `anzg_iron_marine` — the
+sole bimodal source among the 41 ([Source representation]) — attracts appreciable
+mixture weight, and only at larger $N$; the five unimodal sources stay near zero. This
+is the expected and correct behaviour of the criterion: the mixture is a legitimate
+competitor under exactly those conditions.
 
-Above the degenerate range the figures read the way model averaging should. In
-@fig-4a, once the mixture's AICc becomes valid at $N \ge 7$ the weight on the source
-distribution climbs steadily with $N$: at small $N$ a handful of observations cannot
-distinguish one candidate distribution from another, so the weight is spread across
-them, and it concentrates on the generating distribution only as the sample grows.
-@fig-4b shows the complementary reading for the mixture — once it is properly
-penalised from $N = 7$, it earns appreciable weight only where the source data are
-genuinely bimodal (the `lnorm_lnorm` panel) and the sample is large enough to reveal
-that bimodality, and stays near zero for the unimodal sources. The mixture is a
-legitimate competitor under exactly those conditions and a spurious winner at $N = 5$
-under none of them.
-
-The downstream effect of the $N = 5$ degeneracy on the estimates themselves is
-shown in @fig-3:
+Bias also varies with the generating distribution. @fig-3 shows the median relative
+bias by source:
 
 ```{r}
 #| label: fig-3
-#| fig-cap: "Median relative bias versus N, faceted by source distribution, coloured by HC proportion. The line and points are the median; the shaded band is the Q25–Q75 spread across datasets and simulations, from the committed bias_by_source_summary.csv. Bias is on a symmetric-log axis (signed, with a heavy positive tail at small N). The large positive bias at N = 5 across the unimodal panels is the mixture degeneracy propagating into the model-averaged HC~x~ estimate; it is largest by far for gamma-sourced data, whose extreme left tail is where the spuriously-weighted mixture over-predicts the low HC~x~ quantiles most severely."
+#| fig-cap: "Median relative bias versus N, faceted by source distribution, coloured by HC proportion. The line and points are the median; the shaded band is the Q25–Q75 spread across datasets and simulations, from the committed bias_by_source_summary.csv. Bias is on a symmetric-log axis (signed, with a heavy positive tail at small N). Bias is largest by far at N = 5 for gamma-sourced data, whose extreme left tail is where over-prediction of the low HC~x~ quantiles is most severe; the anomalous N = 5–6 behaviour is explained in [The AICc mixture degeneracy]."
 #| fig-width: 8
 #| fig-height: 5.5
 props <- sort(unique(bs$proportion))
@@ -522,6 +459,103 @@ ggplot(fig3, aes(nrow, bias_median, colour = HC, fill = HC)) +
   labs(x = "N (sample size)", y = "Median relative bias\n(est − true)/true") +
   theme_bw(base_size = 10)
 ```
+
+Bias is largest by far at $N = 5$ for gamma-sourced data. The gamma's extreme left tail
+is where over-prediction of the low HC~x~ quantiles bites hardest, so gamma-sourced
+data carry the heaviest positive bias; the other unimodal sources show the same sign at
+$N = 5$ but a smaller magnitude. From $N \ge 7$ the bias settles toward zero across all
+sources as $N$ grows.
+
+### The N = 5 and N = 6 anomaly
+
+At $N = 5$ and $N = 6$ the weights in all three figures depart sharply from the
+pattern above, and identically across panels regardless of what generated the data. At
+$N = 5$ the `lnorm_lnorm` mixture takes essentially all the weight in every panel of
+@fig-4b — including the five unimodal sources, which generated no mixture data — so the
+weight on the source distribution in @fig-4a collapses to near zero and the bias in
+@fig-3 jumps to its largest positive values. At $N = 6$ the mixture takes exactly none
+of the weight, again in every panel, and the source-distribution weight and bias shift
+accordingly. That this is the same in panels whose source never produced a mixture
+means it is not a property of the data: it is an artefact of the AICc criterion,
+explained in the next section, [The AICc mixture degeneracy].
+
+## The AICc mixture degeneracy
+
+The small-$N$ behaviour in the results above is driven by a degeneracy in the AICc
+model-averaging criterion, which this study surfaces across all 41 datasets and
+20,500 fits. This section sets out the mechanism, draws on the per-source figures
+(@fig-4a, @fig-4b, @fig-3) to show that the degeneracy is a property of the criterion
+rather than of the data, and reports one result from the earlier grey literature that
+cannot be reconciled with this run. A comparison establishing that the degeneracy is
+invariant to `ssdtools` version and to the fit arguments is given in
+[Appendix D — AICc degeneracy: version and fitting-engine comparison].
+
+### The mechanism
+
+At small $N$ the AICc small-sample correction breaks down for the five-parameter
+mixture, and this is what the criterion is doing rather than the mixture fitting
+better. AICc adds $\frac{2k(k+1)}{n-k-1}$ to AIC, and for the five-parameter
+mixture ($k = 5$) that denominator is non-positive at small $N$. At $n = 5$ it is
+$-1$, so the correction is $2\cdot5\cdot6/(-1) = -60$ and the mixture's AICc is
+spuriously *lowered* — a reward rather than a penalty — so it wins every comparison
+and takes weight $\approx 1$. At $n = 6$ the denominator is $0$, its AICc is
+$+\infty$, and its weight is forced to exactly 0. The correction is only defined
+for $n \ge k + 2$, i.e. $N \ge 7$ for a five-parameter model, so the $N = 5$
+and $N = 6$ mixture weights are degenerate artefacts of the criterion, not evidence
+about fit.
+
+This is reproducible in a few lines against current CRAN `ssdtools`, and is
+recorded as a `ssdtools` software issue [@ssdtools_aicc_issue]:
+
+```r
+library(ssdtools)                                     # 2.6.0
+dat <- data.frame(Conc = c(0.1, 0.3, 1, 3, 10))       # n = 5
+fit <- ssd_fit_dists(dat, dists = ssd_dists_bcanz(), nrow = 5)
+glance(fit, wt = TRUE)[, c("dist", "npars", "aic", "aicc", "wt")]
+#> dist        npars   aic   aicc   wt
+#> gamma           2  23.3   29.3   ~0
+#> lgumbel         2  23.1   29.1   ~0
+#> llogis          2  23.3   29.3   ~0
+#> lnorm           2  22.9   28.9   ~0
+#> lnorm_lnorm     5  28.0  -32.0   1.00   # worst AIC, best AICc: correction = -60
+#> weibull         2  23.2   29.2   ~0
+```
+
+The mixture has the worst AIC (28.0) but the best AICc (−32.0), and so takes
+essentially all of the AICc weight. These values are fixed by the criterion alone:
+each two-parameter candidate receives a correction of $2\cdot2\cdot3/(5-2-1) = +6$
+and the mixture a correction of $2\cdot5\cdot6/(5-5-1) = -60$, a 66-point swing
+computed entirely from the integers $n$ and $k$ and set against AIC differences
+that, on five observations, are of order $0.1$. Neither the $-60$ at $n = 5$ nor the
+$+\infty$ at $n = 6$ depends on the log-likelihood, the optimiser, or the data — the
+ranking is settled before the data are consulted. This is why relaxing `computable`,
+`at_boundary_ok` or `min_pmix` changes nothing, and why the mixture weight is
+identical across every `ssdtools` version tested
+([Appendix D — AICc degeneracy: version and fitting-engine comparison]).
+
+### The degeneracy is mechanical, not data-dependent
+
+The single-dataset reprex above generalises to all 41 datasets, and the per-source
+weight figure ([Results by source distribution]) is the most direct evidence. At
+$N = 5$ the mixture receives a mean re-fitted weight of `r round(mix5, 2)` across all
+41 datasets (`r round(mix5_uni, 2)` averaged over just the five unimodal sources),
+regardless of what generated the data (@fig-4b). The spread behind that mean is what
+makes the case: the median re-fitted mixture weight at $N = 5$ is exactly $1$ for
+`r if (mix5_all_med1) "every one of the 41 datasets" else "almost every dataset"`, and
+for `r 41 - mix5_n_spread` of them the entire 10th-to-90th-percentile band across the
+500 simulations sits at $\ge 0.99$ — both the between-dataset and the
+between-simulation spread are negligible. The single exception is `anzg_iron_marine`
+(the lone `lnorm_lnorm` source), whose mixture genuinely competes; its panel is the
+only one showing a visible range at $N = 5$. The mean is pulled below $1$ (to
+`r round(mix5, 2)`) only by a thin tail of simulations in which the mixture fit failed
+numerically and took weight $0$ — not by any real spread in the weight the criterion
+assigns. A weight of $\approx 1$ with this little variation, across every dataset and
+almost every simulation and irrespective of what generated the data, is the strongest
+available demonstration that the degeneracy is mechanical, a property of the criterion
+at $n = k$, rather than data-dependent evidence of bimodality. It is the like-for-like
+complement to the criterion-not-fit argument in [Findings and recommendations]. The
+five unimodal panels of @fig-4b carry this argument; the `lnorm_lnorm`-source panel is
+a single dataset and is shown only for completeness.
 
 ### An irrecoverable result
 
