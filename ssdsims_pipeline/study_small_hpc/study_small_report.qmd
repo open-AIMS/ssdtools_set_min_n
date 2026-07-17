@@ -52,33 +52,6 @@ hc1_bias_n6  <- hc1_bias$bias_median[hc1_bias$nrow == 6]
 hc1_bias_n10 <- hc1_bias$bias_median[hc1_bias$nrow == 10]
 ```
 
-## Purpose and scope
-
-This report asks a methodological question about species sensitivity distribution
-(SSD) modelling: **how small a sample can support reliable HC~x~ estimation, and
-how does the model-averaging criterion behave as the sample size approaches the
-number of parameters being fitted?** It answers that question with a simulation
-study — 41 datasets, seven sample sizes, and roughly 20,500 model fits — run
-through the [`ssdsims`](https://poissonconsulting.github.io/ssdsims/) pipeline
-[@ssdsims].
-
-The study therefore has two aims that reinforce one another. The scientific aim is
-to characterise the bias, interval width, and coverage of model-averaged HC~x~
-estimates across sample sizes, and to establish what the AICc model-averaging
-criterion does when the five-parameter mixture in the default candidate set is
-fitted with too few observations. The methodological aim is to demonstrate a
-simulation framework in which every figure and table traces back to committed
-inputs, so that each result can be regenerated and inspected end to end. Both aims
-are served by keeping the study small enough to be fully reproducible: 41
-`ssddata` datasets rather than a large combined corpus.
-
-The regulatory and scientific context for the sample-size question — the final
-report of the Australia/New Zealand SSD investigation [@fox_final_2024], the 2024
-addendum to that investigation [@fisher_addendum_2024], and the current ANZG
-guidance [@warne_method_2025] — is set out in [Background]. This study revises one
-finding from that earlier grey literature; that revision is discussed in a few
-sentences in [Findings and recommendations] and is not the purpose of the report.
-
 ## Background
 
 The final report of the joint investigation into SSD modelling and `ssdtools`
@@ -144,12 +117,12 @@ HPC and local workflows are documented in [Appendix A — HPC workflow] and
 used — 34 ANZG and 7 CCME. This differs from the 2024 addendum, which combined 20
 `ssddata` datasets with the EnviroTox corpus of [@yanagihara_which_2024] for 353
 datasets in total. This study replicates the addendum's *design* on the 41
-`ssddata` datasets; it does not replicate the 353-dataset EnviroTox corpus. One
+`ssddata` datasets; it does not replicate the 353-dataset EnviroTox datasets. One reason for this was a desire to use real, curated ssd datasets in the testing, now that the `ssddata` package was updated. The 
 consequence is that some source distributions are represented by very few datasets
 here (see **Source representation** below).
 
-**Single-source generating design.** For each dataset, the top-AICc-weighted BCANZ
-distribution from the real-data fit was treated as that dataset's single
+**Single-source generating design.** For each dataset, the top-AICc-weighted BCANZ distribution (`r ssdtools::ssd_dists_bcanz()`)
+from the real-data fit was treated as that dataset's single
 data-generating "source" distribution, and samples were drawn from that one
 distribution. The true HC~x~ for a dataset is the HC~x~ of that same source
 distribution. Each simulated dataset therefore has a single true source, not a
@@ -189,17 +162,16 @@ Across the 41 `ssddata` datasets, only the **lnorm_lnorm mixture has a near-pure
 representative** (`` `r mix_ds` ``, weight `r round(mix_wt, 2)`); for the five
 unimodal distributions the best any single dataset reaches is only
 `r round(min(uni_max), 2)`–`r round(max(uni_max), 2)`, so no `ssddata` dataset is
-unambiguously one distribution. The counts of datasets per source are thin and vary
-widely (gamma 4, lgumbel 15, llogis 5, lnorm 10, lnorm_lnorm 1, weibull 6), so the
-`lnorm_lnorm`-source panel in the results is a single dataset (`anzg_iron_marine`)
-and is not over-read. Finding clean, high-weight representatives of each source
-distribution is exactly what motivated the addendum's use of a much larger corpus
-[@fisher_addendum_2024]; this study trades that representativeness for full
-reproducibility. The complete 41 × 6 weight matrix is in `dataset_aicc_weights.csv`.
+unambiguously one distribution. The counts of datasets per source vary
+(gamma 4, lgumbel 15, llogis 5, lnorm 10, lnorm_lnorm 1, weibull 6), so the
+`lnorm_lnorm`-source panel in the results is a single dataset (`anzg_iron_marine`). 
 
 **Estimation.** Every simulated dataset was re-fit with the model-averaged
 ("multi") method over the six BCANZ distributions, with 95% confidence intervals
-from the recommended weighted-sample bootstrap [@fox_final_2024].
+from the recommended weighted-sample bootstrap [@fox_final_2024]. All fits were
+produced under `ssdtools` 2.6.0 (the most recent CRAN release, 2026-03-05), in
+which the AICc small-sample degeneracy described in [The AICc mixture degeneracy]
+is present, as it is in all earlier versions.
 
 **Sample-size grid.** For every dataset, 500 samples of each size
 $N \in \{5, 6, 7, 8, 10, 16, 26\}$ were drawn and re-fit. The grid follows the
@@ -223,7 +195,8 @@ The terms "relative bias" and "relative CI width" and the limit symbols
 $\text{ucl}$ / $\text{lcl}$ are used consistently throughout this report, including
 in figure captions and axis labels.
 
-## Results: bias, CI width, and coverage
+## Results
+### Bias, CI width, and coverage overall all datasets
 
 Coverage of the true HC~x~ is lowest at $N = 5$, falling to 0.58 (HC1) through
 0.78 (HC20) — well below the nominal 0.95. It rises to roughly 0.87–0.89 at
@@ -287,9 +260,9 @@ display <- summary_table |>
 kable(display, align = "lrrrrrrr")
 ```
 
-## Results by source distribution
+### AICc weights and bias for each source distribution
 
-The aggregate metrics in [Results: bias, CI width, and coverage] average over all 41
+The aggregate metrics in the previous section average over all 41
 datasets. Beyond bias, coverage, and interval width, it is informative to examine how
 the AICc weights themselves behave as the sample size grows — whether the criterion
 recovers the distribution that generated the data, and under what conditions the
@@ -298,15 +271,8 @@ distribution generated the data. This section reads the run by source distributi
 the BCANZ distribution treated, for each dataset, as its single data-generating
 source (see [Methods]).
 
-The two-panel weight figure below tracks, for data generated from each source distribution,
-how the re-fitted AICc weights change with $N$: panel A the weight assigned to the
-source distribution itself, panel B the weight assigned to the `lnorm_lnorm` mixture.
-Both panels are built from the committed `source_weights_summary.csv` (mean re-fitted AICc
-weight per source × $N$ × distribution, averaged over the 500 simulations and over the
-datasets sharing a source), and their per-dataset spread from `fit_weights_summary.csv`
-and `fit_weights_quantiles.csv`. Panel headers carry the number of contributing
-datasets so that thin panels — the `lnorm_lnorm` source, in particular, has only one —
-are visible.
+For data generated from each source distribution, @fig-source-weights shows how the
+re-fitted AICc weights change with $N$.
 
 ```{r per-source-setup}
 sw <- read.csv("source_weights_summary.csv")
@@ -394,7 +360,7 @@ mix5_n_spread <- sum(mix_q5$q10 < 0.99)
 
 ```{r}
 #| label: fig-source-weights
-#| fig-cap: "Re-fitted AICc weight versus N, faceted by source distribution. (A) weight of the source distribution itself; (B) weight of the lnorm_lnorm mixture. In both panels each point is one dataset's mean weight over its 500 simulations (between-dataset spread), and each grey line is that dataset's 10th–90th percentile across those simulations (between-simulation spread); the dashed line marks N = 7, where the five-parameter mixture's AICc first becomes valid. From N ≥ 7 the source-distribution weight (A) rises with N as more observations let the criterion discriminate the generating distribution from its competitors, while the mixture (B) earns appreciable weight only where the source data are genuinely bimodal and the sample is large enough to detect it. The near-zero source weight and ≈ 1 mixture weight at N = 5 in every panel — including the five unimodal sources, which generated no mixture data — and the shift at N = 6 are explained in [The AICc mixture degeneracy]."
+#| fig-cap: "Re-fitted AICc weight versus N, faceted by source distribution. (A) weight of the source distribution itself; (B) weight of the lnorm_lnorm mixture. In both panels each point is one dataset's mean weight over its 500 simulations (between-dataset spread, from the committed fit_weights_summary.csv), and each grey line is that dataset's 10th–90th percentile across those simulations (between-simulation spread, from fit_weights_quantiles.csv); the dashed line marks N = 7, where the five-parameter mixture's AICc first becomes valid. Each panel header carries the number of contributing datasets (from source_weights_summary.csv) so that thin panels — the lnorm_lnorm source has only one — are visible."
 #| fig-width: 8
 #| fig-height: 9
 # Stacked with patchwork (the repo's convention, as in make_report_outputs.R):
@@ -427,7 +393,7 @@ bias by source:
 
 ```{r}
 #| label: fig-3
-#| fig-cap: "Median relative bias versus N, faceted by source distribution, coloured by HC proportion. The line and points are the median; the shaded band is the Q25–Q75 spread across datasets and simulations, from the committed bias_by_source_summary.csv. Bias is on a symmetric-log axis (signed, with a heavy positive tail at small N). Bias is largest by far at N = 5 for gamma-sourced data, whose extreme left tail is where over-prediction of the low HC~x~ quantiles is most severe; the anomalous N = 5–6 behaviour is explained in [The AICc mixture degeneracy]."
+#| fig-cap: "Median relative bias versus N, faceted by source distribution, coloured by HC proportion. The line and points are the median; the shaded band is the Q25–Q75 spread across datasets and simulations, from the committed bias_by_source_summary.csv. Bias is on a symmetric-log axis (signed, with a heavy positive tail at small N)."
 #| fig-width: 8
 #| fig-height: 5.5
 props <- sort(unique(bs$proportion))
@@ -503,11 +469,11 @@ for $n \ge k + 2$, i.e. $N \ge 7$ for a five-parameter model, so the $N = 5$
 and $N = 6$ mixture weights are degenerate artefacts of the criterion, not evidence
 about fit.
 
-This is reproducible in a few lines against current CRAN `ssdtools`, and is
+This is reproducible in a few lines under `ssdtools` 2.6.0 and earlier, and is
 recorded as a `ssdtools` software issue [@ssdtools_aicc_issue]:
 
 ```r
-library(ssdtools)                                     # 2.6.0
+library(ssdtools)                                     # 2.6.0 and earlier
 dat <- data.frame(Conc = c(0.1, 0.3, 1, 3, 10))       # n = 5
 fit <- ssd_fit_dists(dat, dists = ssd_dists_bcanz(), nrow = 5)
 glance(fit, wt = TRUE)[, c("dist", "npars", "aic", "aicc", "wt")]
@@ -559,7 +525,7 @@ a single dataset and is shown only for completeness.
 ### An irrecoverable result
 
 A long-standing degeneracy in the AICc small-sample correction becomes dominant
-under the current `ssdtools` fitting engine. At $N = 5$ the engine fits the
+under the `ssdtools` 2.x fitting engine. At $N = 5$ the engine fits the
 over-parameterised mixture in essentially every case: across the 41 real datasets
 the mean re-fitted mixture weight is `r round(mix5, 2)`, and 95.5% of the $N = 5$
 model-averaged HC estimates collapse onto it (panel B of @fig-source-weights; [Results: bias, CI width,
@@ -588,7 +554,7 @@ wt_new   <- fr_get("2.6.0", "native", "mean_mixture_weight")
 A Monte Carlo check — 1,000 samples of $N = 5$ drawn from a unimodal lognormal
 source and fitted under each engine — isolates that shift. Under the 2024-era engine
 (`ssdtools` 1.0.6) the mixture is fitted at $N = 5$ in about `r round(rate_old)`% of
-samples, with mean weight `r round(wt_old, 2)`; under the current engine (2.6.0, the
+samples, with mean weight `r round(wt_old, 2)`; under the 2.6.0 engine (the
 pipeline's own settings) it is fitted in nearly every case (`r round(rate_new)`%,
 mean weight `r round(wt_new, 2)`). The mean weight tracks the fit rate directly,
 because a fitted $N = 5$ mixture almost always wins the $-60$ AICc reward. The
